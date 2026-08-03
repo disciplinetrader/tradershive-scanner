@@ -13,11 +13,14 @@ from app.core.constants import FEATURE_WEIGHTS
 from app.core.logging import configure_logging
 from app.data.cache import MarketDataCache
 from app.data.loader import DataLoader
+from app.data.sectors import load_sector_assignments
 from app.engine.registry import FeatureRegistry
 from app.engine.scorer import Scorer
 from app.features.market import MarketFeature
 from app.features.momentum import MomentumFeature
 from app.features.relative_strength import RelativeStrengthFeature
+from app.features.sector import SectorFeature
+from app.features.stock import StockFeature
 from app.features.trend import TrendFeature
 from app.features.volatility import VolatilityFeature
 from app.features.volume import VolumeFeature
@@ -33,6 +36,7 @@ class ScanRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     symbols: list[str] = Field(min_length=1, max_length=500)
+    sectors: dict[str, str] = Field(default_factory=dict)
 
 
 class HealthResponse(BaseModel):
@@ -47,6 +51,8 @@ def build_scorer() -> Scorer:
     registry = FeatureRegistry(
         [
             MarketFeature(),
+            SectorFeature(),
+            StockFeature(),
             TrendFeature(),
             RelativeStrengthFeature(),
             MomentumFeature(),
@@ -88,7 +94,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     def scan(request: ScanRequest) -> list[StockResult]:
         """Download, score, and rank the requested NSE symbols."""
         try:
-            return build_scanner(resolved_settings).scan(request.symbols)
+            return build_scanner(resolved_settings).scan(request.symbols, request.sectors)
         except (ValueError, RuntimeError) as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
 
@@ -103,11 +109,18 @@ def cli(arguments: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Scan Indian equities for momentum")
     parser.add_argument("symbols", nargs="+", help="NSE symbols such as RELIANCE or TCS")
     parser.add_argument("--output", type=Path, help="Optional output .xlsx path")
+    parser.add_argument(
+        "--sector-map",
+        type=Path,
+        help="Optional JSON object mapping symbols to supported sectors",
+    )
     parsed = parser.parse_args(arguments)
-    results = build_scanner().scan(parsed.symbols)
+    sector_assignments = load_sector_assignments(parsed.sector_map) if parsed.sector_map else None
+    results = build_scanner().scan(parsed.symbols, sector_assignments)
     for result in results:
         print(
             f"{result.rank:>3} {result.symbol:<20} {result.final_score:>6.2f} "
+            f"Grade {result.facts.stock_grade.value:<2} "
             f"RS {result.features['relative_strength'].score:>6.2f} "
             f"Pctl {result.facts.relative_strength_percentile:>6.2f}"
         )

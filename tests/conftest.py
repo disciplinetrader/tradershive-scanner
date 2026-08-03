@@ -9,6 +9,8 @@ import pytest
 from app.models.facts import Facts
 from app.models.market import MarketRegime
 from app.models.relative_strength import RelativeStrengthHorizon, RelativeStrengthProfile
+from app.models.sector import SectorRotation
+from app.models.stock import StockFacts, StockGrade, StockProfile
 
 
 @pytest.fixture
@@ -35,6 +37,56 @@ def rising_frame() -> pd.DataFrame:
 @pytest.fixture
 def bullish_facts() -> Facts:
     """Return complete facts representing a liquid bullish stock."""
+    stock_facts = StockFacts(
+        symbol="TEST.NS",
+        close=100,
+        ema20=95,
+        ema50=90,
+        ema100=87,
+        ema150=84,
+        ema200=80,
+        ema_alignment=True,
+        distance_above_ema20=0.0526,
+        distance_above_ema50=0.1111,
+        distance_above_ema200=0.25,
+        return_20d=0.08,
+        return_50d=0.15,
+        return_100d=0.25,
+        return_150d=0.35,
+        return_250d=0.50,
+        atr14=3,
+        atr_expansion=0.05,
+        average_daily_range=0.025,
+        distance_from_52_week_high=0.05,
+        distance_from_52_week_low=0.82,
+        higher_highs=16,
+        higher_lows=16,
+        lower_highs=3,
+        lower_lows=3,
+        gap_percent=0.01,
+        average_gap=0.004,
+        relative_volume=2,
+        average_volume=1_000_000,
+        volume_expansion=True,
+        volume_contraction=False,
+        new_high=False,
+        new_low=False,
+        inside_day=False,
+        outside_day=False,
+        nr7=False,
+        history_days=320,
+    )
+    stock_profile = StockProfile(
+        score=94,
+        confidence=1,
+        grade=StockGrade.A_PLUS,
+        trend_score=95,
+        momentum_score=93,
+        participation_score=100,
+        health_score=85,
+        reasons=("Perfect EMA alignment", "Strong trend persistence", "Strong participation"),
+        facts=stock_facts,
+    )
     return Facts(
         symbol="TEST.NS",
         close=100,
@@ -51,6 +103,16 @@ def bullish_facts() -> Facts:
         market_confidence=1,
         market_state=MarketRegime.HEALTHY_BULL,
         market_reasons=("Strong breadth", "Low VIX", "Indexes above EMA200"),
+        sector_name="Defence",
+        sector_rank=1,
+        sector_percentile=99,
+        sector_score=95,
+        sector_confidence=1,
+        sector_rotation=SectorRotation.LEADING,
+        sector_reasons=("Highest RS over 100 days", "Broad participation"),
+        stock_score=stock_profile.score,
+        stock_grade=stock_profile.grade,
+        stock_profile=stock_profile,
         ema_alignment=True,
         near_52_week_high=True,
         distance_from_high=0.0476,
@@ -86,6 +148,8 @@ def feature_names() -> Iterator[str]:
     """Yield canonical feature names for aggregation assertions."""
     yield from (
         "market",
+        "sector",
+        "stock",
         "trend",
         "relative_strength",
         "momentum",

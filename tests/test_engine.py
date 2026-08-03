@@ -8,6 +8,8 @@ from app.engine.scorer import Scorer
 from app.features.market import MarketFeature
 from app.features.momentum import MomentumFeature
 from app.features.relative_strength import RelativeStrengthFeature
+from app.features.sector import SectorFeature
+from app.features.stock import StockFeature
 from app.features.trend import TrendFeature
 from app.features.volatility import VolatilityFeature
 from app.features.volume import VolumeFeature
@@ -19,6 +21,8 @@ def production_registry() -> FeatureRegistry:
     return FeatureRegistry(
         [
             MarketFeature(),
+            SectorFeature(),
+            StockFeature(),
             TrendFeature(),
             RelativeStrengthFeature(),
             MomentumFeature(),

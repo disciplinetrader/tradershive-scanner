@@ -4,6 +4,8 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.market import MarketRegime
 from app.models.relative_strength import RelativeStrengthProfile
+from app.models.sector import SectorRotation
+from app.models.stock import StockGrade, StockProfile
 
 
 class Facts(BaseModel):
@@ -26,6 +28,16 @@ class Facts(BaseModel):
     market_confidence: float = Field(ge=0, le=1)
     market_state: MarketRegime
     market_reasons: tuple[str, ...] = Field(min_length=1)
+    sector_name: str = Field(min_length=1)
+    sector_rank: int = Field(ge=0)
+    sector_percentile: float = Field(ge=0, le=99)
+    sector_score: float = Field(ge=0, le=100)
+    sector_confidence: float = Field(ge=0, le=1)
+    sector_rotation: SectorRotation
+    sector_reasons: tuple[str, ...] = Field(min_length=1)
+    stock_score: float = Field(ge=0, le=100)
+    stock_grade: StockGrade
+    stock_profile: StockProfile
     ema_alignment: bool
     near_52_week_high: bool
     distance_from_high: float = Field(ge=0)

@@ -9,6 +9,8 @@ from app.data.benchmark import BenchmarkSnapshot
 from app.models.facts import Facts
 from app.models.market import MarketProfile, MarketRegime
 from app.models.relative_strength import RelativeStrengthHorizon, RelativeStrengthProfile
+from app.models.sector import SectorProfile, SectorRotation
+from app.models.stock import StockProfile
 
 
 def build_facts(
@@ -16,6 +18,9 @@ def build_facts(
     frame: pd.DataFrame,
     benchmark: BenchmarkSnapshot,
     market_profile: MarketProfile | None = None,
+    sector_profile: SectorProfile | None = None,
+    sector_name: str = "Unclassified",
+    stock_profile: StockProfile | None = None,
 ) -> Facts:
     """Build immutable facts from the latest complete indicator row."""
     required = {
@@ -80,6 +85,11 @@ def build_facts(
         if market_profile
         else ("Market profile unavailable; using primary benchmark trend",)
     )
+    resolved_sector_name = sector_profile.facts.name if sector_profile else sector_name
+    if stock_profile is None:
+        from app.engine.stock import StockEngine
+
+        stock_profile = StockEngine().analyze(symbol, frame)
     return Facts(
         symbol=symbol.upper(),
         close=close,
@@ -96,6 +106,20 @@ def build_facts(
         market_confidence=market_confidence,
         market_state=market_state,
         market_reasons=market_reasons,
+        sector_name=resolved_sector_name,
+        sector_rank=sector_profile.rank if sector_profile else 0,
+        sector_percentile=sector_profile.percentile if sector_profile else 0,
+        sector_score=sector_profile.score if sector_profile else 0,
+        sector_confidence=sector_profile.confidence if sector_profile else 0,
+        sector_rotation=sector_profile.rotation if sector_profile else SectorRotation.LAGGING,
+        sector_reasons=(
+            sector_profile.reasons
+            if sector_profile
+            else ("Sector classification unavailable for this symbol",)
+        ),
+        stock_score=stock_profile.score,
+        stock_grade=stock_profile.grade,
+        stock_profile=stock_profile,
         ema_alignment=close > ema20 > ema50 > ema200,
         near_52_week_high=distance_from_high <= 0.10,
         distance_from_high=distance_from_high,

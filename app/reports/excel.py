@@ -23,8 +23,14 @@ def generate_excel_report(results: Sequence[StockResult], destination: Path) -> 
         "Rank",
         "Symbol",
         "Score",
+        "Stock Grade",
+        "Stock Score",
         "RS",
         "Percentile",
+        "Sector",
+        "Sector Rank",
+        "Sector Rotation",
+        "Sector Score",
         "Trend",
         "Volume",
         "Market",
@@ -42,8 +48,14 @@ def generate_excel_report(results: Sequence[StockResult], destination: Path) -> 
             result.rank,
             result.symbol,
             result.final_score,
+            result.facts.stock_grade.value,
+            result.facts.stock_score,
             result.features["relative_strength"].score,
             result.facts.relative_strength_percentile,
+            result.facts.sector_name,
+            result.facts.sector_rank,
+            result.facts.sector_rotation.value,
+            result.features["sector"].score,
             result.features["trend"].score,
             result.features["volume"].score,
             result.features["market"].score,
@@ -72,7 +84,7 @@ def generate_excel_report(results: Sequence[StockResult], destination: Path) -> 
     for index, header in enumerate(headers, 1):
         width = 80 if header == "Reasons" else max(12, min(24, len(header) + 2))
         sheet.column_dimensions[get_column_letter(index)].width = width
-    for row in sheet.iter_rows(min_row=2, min_col=3, max_col=10):
+    for row in sheet.iter_rows(min_row=2, min_col=3, max_col=16):
         for cell in row:
             cell.number_format = "0.00"
     workbook.save(temporary)

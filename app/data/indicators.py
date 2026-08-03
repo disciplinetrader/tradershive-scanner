@@ -11,7 +11,7 @@ def add_indicators(frame: pd.DataFrame) -> pd.DataFrame:
     """Return a copy with all columns required by the facts engine."""
     result = frame.copy()
     close = result["Close"].astype(float)
-    for period in (20, 50, 200):
+    for period in (20, 50, 100, 150, 200):
         result[f"EMA{period}"] = ta.ema(close, length=period)
 
     result["ATR14"] = ta.atr(

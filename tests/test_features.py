@@ -3,6 +3,8 @@
 from app.features.market import MarketFeature
 from app.features.momentum import MomentumFeature
 from app.features.relative_strength import RelativeStrengthFeature
+from app.features.sector import SectorFeature
+from app.features.stock import StockFeature
 from app.features.trend import TrendFeature
 from app.features.volatility import VolatilityFeature
 from app.features.volume import VolumeFeature
@@ -14,6 +16,8 @@ def test_all_bullish_features_return_valid_explainable_scores(bullish_facts: Fac
     """Every feature should emit normalized scores, confidence, and reasons."""
     features = [
         MarketFeature(),
+        SectorFeature(),
+        StockFeature(),
         TrendFeature(),
         RelativeStrengthFeature(),
         MomentumFeature(),
@@ -31,6 +35,8 @@ def test_all_bullish_features_return_valid_explainable_scores(bullish_facts: Fac
 def test_bullish_facts_score_highly(bullish_facts: Facts) -> None:
     """Strong trend, momentum, participation, and regime should score well."""
     assert MarketFeature().evaluate(bullish_facts).score == 100
+    assert SectorFeature().evaluate(bullish_facts).score == 95
+    assert StockFeature().evaluate(bullish_facts).score == 94
     assert TrendFeature().evaluate(bullish_facts).score == 100
     assert RelativeStrengthFeature().evaluate(bullish_facts).score >= 80
     assert MomentumFeature().evaluate(bullish_facts).score >= 90

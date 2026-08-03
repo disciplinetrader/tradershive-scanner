@@ -14,6 +14,8 @@ from app.features.relative_strength import (
     RelativeStrengthFeature,
     assign_relative_strength_percentiles,
 )
+from app.features.sector import SectorFeature
+from app.features.stock import StockFeature
 from app.features.trend import TrendFeature
 from app.features.volatility import VolatilityFeature
 from app.features.volume import VolumeFeature
@@ -150,6 +152,8 @@ def _production_scorer() -> Scorer:
     registry = FeatureRegistry(
         [
             MarketFeature(),
+            SectorFeature(),
+            StockFeature(),
             TrendFeature(),
             RelativeStrengthFeature(),
             MomentumFeature(),

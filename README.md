@@ -17,6 +17,10 @@ The multi-horizon rating and universe-ranking methodology is documented in
 [`docs/relative-strength-engine.md`](docs/relative-strength-engine.md).
 Market quality, breadth, volatility, and regime classification are documented in
 [`docs/market-intelligence-engine.md`](docs/market-intelligence-engine.md).
+Sector leadership, member mapping, ranking, and rotation are documented in
+[`docs/sector-intelligence-engine.md`](docs/sector-intelligence-engine.md).
+Intrinsic trend, momentum, participation, health, and grading are documented in
+[`docs/stock-intelligence-engine.md`](docs/stock-intelligence-engine.md).
 
 ## Setup
 

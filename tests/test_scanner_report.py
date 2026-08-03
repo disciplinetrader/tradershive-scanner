@@ -12,6 +12,8 @@ from app.engine.scorer import Scorer
 from app.features.market import MarketFeature
 from app.features.momentum import MomentumFeature
 from app.features.relative_strength import RelativeStrengthFeature
+from app.features.sector import SectorFeature
+from app.features.stock import StockFeature
 from app.features.trend import TrendFeature
 from app.features.volatility import VolatilityFeature
 from app.features.volume import VolumeFeature
@@ -43,6 +45,8 @@ def build_test_scanner(frame: pd.DataFrame) -> Scanner:
     registry = FeatureRegistry(
         [
             MarketFeature(),
+            SectorFeature(),
+            StockFeature(),
             TrendFeature(),
             RelativeStrengthFeature(),
             MomentumFeature(),
@@ -67,7 +71,19 @@ def test_scanner_ranks_results_and_report_contains_expected_columns(
     sheet = workbook["Momentum Scanner"]
     headers = [cell.value for cell in sheet[1]]
     assert headers[:3] == ["Rank", "Symbol", "Score"]
-    assert headers[:7] == ["Rank", "Symbol", "Score", "RS", "Percentile", "Trend", "Volume"]
+    assert headers[:11] == [
+        "Rank",
+        "Symbol",
+        "Score",
+        "Stock Grade",
+        "Stock Score",
+        "RS",
+        "Percentile",
+        "Sector",
+        "Sector Rank",
+        "Sector Rotation",
+        "Sector Score",
+    ]
     assert headers[-1] == "Reasons"
     assert sheet.max_row == 3
     assert results[0].facts.relative_strength_percentile == 99
