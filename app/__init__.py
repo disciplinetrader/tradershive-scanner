@@ -1,0 +1,1 @@
+"""TradersHIVE Scanner application package."""

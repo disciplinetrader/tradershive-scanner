@@ -1,0 +1,1 @@
+"""Scanner result report generation."""
