@@ -12,3 +12,4 @@ class FeatureResult(BaseModel):
     score: float = Field(ge=0, le=100)
     confidence: float = Field(ge=0, le=1)
     reasons: tuple[str, ...] = Field(min_length=1)
+    state: str | None = None

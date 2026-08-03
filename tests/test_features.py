@@ -7,6 +7,7 @@ from app.features.trend import TrendFeature
 from app.features.volatility import VolatilityFeature
 from app.features.volume import VolumeFeature
 from app.models.facts import Facts
+from app.models.market import MarketRegime
 
 
 def test_all_bullish_features_return_valid_explainable_scores(bullish_facts: Facts) -> None:
@@ -42,6 +43,9 @@ def test_bearish_changes_reduce_scores(bullish_facts: Facts) -> None:
         update={
             "close": 70,
             "market_trend": False,
+            "market_score": 20,
+            "market_state": MarketRegime.BEAR,
+            "market_reasons": ("Decliners exceed advancers",),
             "ema_alignment": False,
             "near_52_week_high": False,
             "distance_from_high": 0.33,

@@ -2,6 +2,7 @@
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.models.market import MarketRegime
 from app.models.relative_strength import RelativeStrengthProfile
 
 
@@ -21,6 +22,10 @@ class Facts(BaseModel):
     average_volume: float = Field(ge=0)
     volume_ratio: float = Field(ge=0)
     market_trend: bool
+    market_score: float = Field(ge=0, le=100)
+    market_confidence: float = Field(ge=0, le=1)
+    market_state: MarketRegime
+    market_reasons: tuple[str, ...] = Field(min_length=1)
     ema_alignment: bool
     near_52_week_high: bool
     distance_from_high: float = Field(ge=0)

@@ -1,4 +1,4 @@
-"""Broad-market regime scoring."""
+"""Multi-dimensional market regime scoring feature."""
 
 from app.engine.feature import ScoringFeature
 from app.models.facts import Facts
@@ -6,22 +6,16 @@ from app.models.feature_result import FeatureResult
 
 
 class MarketFeature(ScoringFeature):
-    """Reward stocks scanned during a supportive benchmark regime."""
+    """Expose Market Intelligence quality to the aggregate stock scorer."""
 
     name = "market"
 
     def evaluate(self, facts: Facts) -> FeatureResult:
-        """Score the binary benchmark trend fact."""
-        if facts.market_trend:
-            return FeatureResult(
-                name=self.name,
-                score=100,
-                confidence=1,
-                reasons=("Benchmark is above its 200-day EMA with bullish 50/200 alignment",),
-            )
+        """Return market quality score, confidence, state, and profile reasons."""
         return FeatureResult(
             name=self.name,
-            score=20,
-            confidence=1,
-            reasons=("Benchmark trend is not supportive",),
+            score=facts.market_score,
+            confidence=facts.market_confidence,
+            state=facts.market_state.value,
+            reasons=facts.market_reasons,
         )

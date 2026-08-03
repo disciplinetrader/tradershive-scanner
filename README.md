@@ -15,6 +15,8 @@ Detailed normalization, retry, cache, and provider-extension behavior is documen
 [`docs/data-engine.md`](docs/data-engine.md).
 The multi-horizon rating and universe-ranking methodology is documented in
 [`docs/relative-strength-engine.md`](docs/relative-strength-engine.md).
+Market quality, breadth, volatility, and regime classification are documented in
+[`docs/market-intelligence-engine.md`](docs/market-intelligence-engine.md).
 
 ## Setup
 

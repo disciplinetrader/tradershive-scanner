@@ -7,6 +7,7 @@ import pandas as pd
 import pytest
 
 from app.models.facts import Facts
+from app.models.market import MarketRegime
 from app.models.relative_strength import RelativeStrengthHorizon, RelativeStrengthProfile
 
 
@@ -46,6 +47,10 @@ def bullish_facts() -> Facts:
         average_volume=1_000_000,
         volume_ratio=2,
         market_trend=True,
+        market_score=100,
+        market_confidence=1,
+        market_state=MarketRegime.HEALTHY_BULL,
+        market_reasons=("Strong breadth", "Low VIX", "Indexes above EMA200"),
         ema_alignment=True,
         near_52_week_high=True,
         distance_from_high=0.0476,

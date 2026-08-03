@@ -7,6 +7,16 @@ MINIMUM_HISTORY_DAYS = 200
 INDICATOR_WARMUP_DAYS = 260
 DEFAULT_BENCHMARK = "^NSEI"
 NSE_SUFFIX = ".NS"
+MARKET_BENCHMARKS = MappingProxyType(
+    {
+        "nifty_50": "^NSEI",
+        "nifty_next_50": "^NSMIDCP",
+        "nifty_midcap_150": "NIFTYMIDCAP150.NS",
+        "nifty_smallcap_250": "NIFTYSMLCAP250.NS",
+        "bank_nifty": "^NSEBANK",
+        "india_vix": "^INDIAVIX",
+    }
+)
 FEATURE_WEIGHTS = MappingProxyType(
     {
         "market": 0.10,

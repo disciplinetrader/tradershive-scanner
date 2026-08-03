@@ -7,6 +7,7 @@ import pandas as pd
 from app.core.constants import RELATIVE_STRENGTH_HORIZONS
 from app.data.benchmark import BenchmarkSnapshot
 from app.models.facts import Facts
+from app.models.market import MarketProfile, MarketRegime
 from app.models.relative_strength import RelativeStrengthHorizon, RelativeStrengthProfile
 
 
@@ -14,6 +15,7 @@ def build_facts(
     symbol: str,
     frame: pd.DataFrame,
     benchmark: BenchmarkSnapshot,
+    market_profile: MarketProfile | None = None,
 ) -> Facts:
     """Build immutable facts from the latest complete indicator row."""
     required = {
@@ -64,6 +66,20 @@ def build_facts(
             for period in RELATIVE_STRENGTH_HORIZONS
         }
     )
+    market_score = (
+        market_profile.score if market_profile else (100.0 if benchmark.market_trend else 20.0)
+    )
+    market_confidence = market_profile.confidence if market_profile else 0.5
+    market_state = (
+        market_profile.state
+        if market_profile
+        else (MarketRegime.BULL if benchmark.market_trend else MarketRegime.BEAR)
+    )
+    market_reasons = (
+        market_profile.reasons
+        if market_profile
+        else ("Market profile unavailable; using primary benchmark trend",)
+    )
     return Facts(
         symbol=symbol.upper(),
         close=close,
@@ -76,6 +92,10 @@ def build_facts(
         average_volume=average_volume,
         volume_ratio=volume_ratio,
         market_trend=benchmark.market_trend,
+        market_score=market_score,
+        market_confidence=market_confidence,
+        market_state=market_state,
+        market_reasons=market_reasons,
         ema_alignment=close > ema20 > ema50 > ema200,
         near_52_week_high=distance_from_high <= 0.10,
         distance_from_high=distance_from_high,

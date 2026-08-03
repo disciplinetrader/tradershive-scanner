@@ -9,6 +9,7 @@ from app.data.facts import build_facts
 from app.data.indicators import add_indicators
 from app.data.loader import DataLoader
 from app.data.universe import load_symbols
+from app.engine.market import MarketEngine
 from app.engine.scorer import Scorer
 from app.features.relative_strength import assign_relative_strength_percentiles
 from app.models.stock_result import StockResult
@@ -19,11 +20,18 @@ logger = get_logger(__name__)
 class Scanner:
     """Coordinate data retrieval, fact derivation, scoring, and ranking."""
 
-    def __init__(self, loader: DataLoader, scorer: Scorer, benchmark_symbol: str) -> None:
+    def __init__(
+        self,
+        loader: DataLoader,
+        scorer: Scorer,
+        benchmark_symbol: str,
+        market_engine: MarketEngine | None = None,
+    ) -> None:
         """Initialize the scanner with explicit, replaceable collaborators."""
         self._loader = loader
         self._scorer = scorer
         self._benchmark_symbol = benchmark_symbol
+        self._market_engine = market_engine or MarketEngine(loader)
 
     def scan(self, symbols: Iterable[str]) -> list[StockResult]:
         """Scan symbols independently and return successful results by score."""
@@ -32,11 +40,17 @@ class Scanner:
             raise ValueError("At least one symbol is required")
 
         benchmark = self._load_benchmark()
-        results: list[StockResult] = []
+        frames = {}
         for symbol in universe:
             try:
-                frame = add_indicators(self._loader.load(symbol))
-                facts = build_facts(symbol, frame, benchmark)
+                frames[symbol] = add_indicators(self._loader.load(symbol))
+            except (ValueError, RuntimeError) as exc:
+                logger.warning("Skipping %s: %s", symbol, exc)
+        market_profile = self._market_engine.analyze(frames)
+        results: list[StockResult] = []
+        for symbol, frame in frames.items():
+            try:
+                facts = build_facts(symbol, frame, benchmark, market_profile)
                 results.append(self._scorer.score(facts))
             except (ValueError, RuntimeError) as exc:
                 logger.warning("Skipping %s: %s", symbol, exc)
