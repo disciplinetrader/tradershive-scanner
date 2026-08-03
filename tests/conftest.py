@@ -7,6 +7,7 @@ import pandas as pd
 import pytest
 
 from app.models.facts import Facts
+from app.models.relative_strength import RelativeStrengthHorizon, RelativeStrengthProfile
 
 
 @pytest.fixture
@@ -52,6 +53,24 @@ def bullish_facts() -> Facts:
         daily_return=0.02,
         return_63d=0.20,
         benchmark_return_63d=0.08,
+        rs5=0.03,
+        rs10=0.04,
+        rs20=0.05,
+        rs50=0.10,
+        rs100=0.12,
+        rs150=0.15,
+        rs250=0.20,
+        relative_strength_score=90,
+        relative_strength_percentile=90,
+        rs_profile=RelativeStrengthProfile(
+            rs5=RelativeStrengthHorizon(relative_return=0.03, percentile=95),
+            rs10=RelativeStrengthHorizon(relative_return=0.04, percentile=90),
+            rs20=RelativeStrengthHorizon(relative_return=0.05, percentile=70),
+            rs50=RelativeStrengthHorizon(relative_return=0.10, percentile=82),
+            rs100=RelativeStrengthHorizon(relative_return=0.12, percentile=86),
+            rs150=RelativeStrengthHorizon(relative_return=0.15, percentile=91),
+            rs250=RelativeStrengthHorizon(relative_return=0.20, percentile=97),
+        ),
         annualized_volatility=0.30,
         history_days=320,
     )

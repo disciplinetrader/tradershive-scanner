@@ -2,6 +2,8 @@
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.models.relative_strength import RelativeStrengthProfile
+
 
 class Facts(BaseModel):
     """Point-in-time technical facts for one equity and its benchmark."""
@@ -26,5 +28,15 @@ class Facts(BaseModel):
     daily_return: float
     return_63d: float
     benchmark_return_63d: float
+    rs5: float
+    rs10: float
+    rs20: float
+    rs50: float
+    rs100: float
+    rs150: float
+    rs250: float
+    relative_strength_score: float = Field(ge=0, le=100)
+    relative_strength_percentile: float = Field(default=0, ge=0, le=100)
+    rs_profile: RelativeStrengthProfile
     annualized_volatility: float = Field(ge=0)
     history_days: int = Field(ge=1)

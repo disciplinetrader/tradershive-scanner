@@ -19,19 +19,38 @@ def generate_excel_report(results: Sequence[StockResult], destination: Path) -> 
     destination.parent.mkdir(parents=True, exist_ok=True)
     temporary = destination.with_suffix(f"{destination.suffix}.tmp")
 
-    feature_names = list(results[0].features)
-    headers = ["Rank", "Symbol", "Final Score"]
-    headers.extend(f"{name.replace('_', ' ').title()} Score" for name in feature_names)
-    headers.append("Reasons")
+    headers = [
+        "Rank",
+        "Symbol",
+        "Score",
+        "RS",
+        "Percentile",
+        "Trend",
+        "Volume",
+        "Market",
+        "Momentum",
+        "Volatility",
+        "Reasons",
+    ]
 
     workbook = Workbook()
     sheet = workbook.active
     sheet.title = "Momentum Scanner"
     sheet.append(headers)
     for result in results:
-        row: list[int | float | str] = [result.rank, result.symbol, result.final_score]
-        row.extend(result.features[name].score for name in feature_names)
-        row.append(" | ".join(result.reasons))
+        row: list[int | float | str] = [
+            result.rank,
+            result.symbol,
+            result.final_score,
+            result.features["relative_strength"].score,
+            result.facts.relative_strength_percentile,
+            result.features["trend"].score,
+            result.features["volume"].score,
+            result.features["market"].score,
+            result.features["momentum"].score,
+            result.features["volatility"].score,
+            " | ".join(result.reasons),
+        ]
         sheet.append(row)
 
     header_fill = PatternFill("solid", fgColor="17365D")
@@ -53,7 +72,7 @@ def generate_excel_report(results: Sequence[StockResult], destination: Path) -> 
     for index, header in enumerate(headers, 1):
         width = 80 if header == "Reasons" else max(12, min(24, len(header) + 2))
         sheet.column_dimensions[get_column_letter(index)].width = width
-    for row in sheet.iter_rows(min_row=2, min_col=3, max_col=3 + len(feature_names)):
+    for row in sheet.iter_rows(min_row=2, min_col=3, max_col=10):
         for cell in row:
             cell.number_format = "0.00"
     workbook.save(temporary)

@@ -4,14 +4,16 @@ import math
 
 import pandas as pd
 
+from app.core.constants import RELATIVE_STRENGTH_HORIZONS
+from app.data.benchmark import BenchmarkSnapshot
 from app.models.facts import Facts
+from app.models.relative_strength import RelativeStrengthHorizon, RelativeStrengthProfile
 
 
 def build_facts(
     symbol: str,
     frame: pd.DataFrame,
-    market_trend: bool,
-    benchmark_return_63d: float,
+    benchmark: BenchmarkSnapshot,
 ) -> Facts:
     """Build immutable facts from the latest complete indicator row."""
     required = {
@@ -29,6 +31,7 @@ def build_facts(
         "Return63D",
         "AnnualizedVolatility",
     }
+    required.update(f"Return{period}D" for period in RELATIVE_STRENGTH_HORIZONS)
     missing = required.difference(frame.columns)
     if missing:
         raise ValueError(f"Indicator frame is missing columns: {sorted(missing)}")
@@ -51,6 +54,16 @@ def build_facts(
     ema20 = float(latest["EMA20"])
     ema50 = float(latest["EMA50"])
     ema200 = float(latest["EMA200"])
+    relative_returns = {
+        period: float(latest[f"Return{period}D"]) - benchmark.returns[period]
+        for period in RELATIVE_STRENGTH_HORIZONS
+    }
+    rs_profile = RelativeStrengthProfile(
+        **{
+            f"rs{period}": RelativeStrengthHorizon(relative_return=relative_returns[period])
+            for period in RELATIVE_STRENGTH_HORIZONS
+        }
+    )
     return Facts(
         symbol=symbol.upper(),
         close=close,
@@ -62,14 +75,23 @@ def build_facts(
         low_52_week=float(latest["Low52W"]),
         average_volume=average_volume,
         volume_ratio=volume_ratio,
-        market_trend=market_trend,
+        market_trend=benchmark.market_trend,
         ema_alignment=close > ema20 > ema50 > ema200,
         near_52_week_high=distance_from_high <= 0.10,
         distance_from_high=distance_from_high,
         gap_percent=gap_percent,
         daily_return=float(latest["DailyReturn"]),
         return_63d=float(latest["Return63D"]),
-        benchmark_return_63d=benchmark_return_63d,
+        benchmark_return_63d=benchmark.return_63d,
+        rs5=relative_returns[5],
+        rs10=relative_returns[10],
+        rs20=relative_returns[20],
+        rs50=relative_returns[50],
+        rs100=relative_returns[100],
+        rs150=relative_returns[150],
+        rs250=relative_returns[250],
+        relative_strength_score=50,
+        rs_profile=rs_profile,
         annualized_volatility=float(latest["AnnualizedVolatility"]),
         history_days=len(frame),
     )

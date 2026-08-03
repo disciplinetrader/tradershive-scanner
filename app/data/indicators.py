@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import pandas_ta as ta
 
-from app.core.constants import TRADING_DAYS_PER_YEAR
+from app.core.constants import RELATIVE_STRENGTH_HORIZONS, TRADING_DAYS_PER_YEAR
 
 
 def add_indicators(frame: pd.DataFrame) -> pd.DataFrame:
@@ -25,6 +25,8 @@ def add_indicators(frame: pd.DataFrame) -> pd.DataFrame:
     result["AverageVolume"] = result["Volume"].rolling(20).mean()
     result["DailyReturn"] = close.pct_change()
     result["Return63D"] = close.pct_change(63)
+    for period in RELATIVE_STRENGTH_HORIZONS:
+        result[f"Return{period}D"] = close.pct_change(period)
     result["AnnualizedVolatility"] = result["DailyReturn"].rolling(20).std(ddof=1) * np.sqrt(
         TRADING_DAYS_PER_YEAR
     )

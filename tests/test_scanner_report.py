@@ -66,7 +66,9 @@ def test_scanner_ranks_results_and_report_contains_expected_columns(
     workbook = load_workbook(report)
     sheet = workbook["Momentum Scanner"]
     headers = [cell.value for cell in sheet[1]]
-    assert headers[:3] == ["Rank", "Symbol", "Final Score"]
-    assert "Market Score" in headers
+    assert headers[:3] == ["Rank", "Symbol", "Score"]
+    assert headers[:7] == ["Rank", "Symbol", "Score", "RS", "Percentile", "Trend", "Volume"]
     assert headers[-1] == "Reasons"
     assert sheet.max_row == 3
+    assert results[0].facts.relative_strength_percentile == 99
+    assert results[1].facts.relative_strength_percentile == 0

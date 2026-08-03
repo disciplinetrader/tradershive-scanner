@@ -13,6 +13,8 @@ Pydantic models form validated boundaries between those layers.
 
 Detailed normalization, retry, cache, and provider-extension behavior is documented in
 [`docs/data-engine.md`](docs/data-engine.md).
+The multi-horizon rating and universe-ranking methodology is documented in
+[`docs/relative-strength-engine.md`](docs/relative-strength-engine.md).
 
 ## Setup
 

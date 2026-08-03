@@ -2,13 +2,15 @@
 
 from collections.abc import Iterable
 
+from app.core.constants import DEFAULT_BENCHMARK
 from app.core.logging import get_logger
-from app.data.benchmark import benchmark_metrics
+from app.data.benchmark import BenchmarkSnapshot, build_benchmark_snapshot
 from app.data.facts import build_facts
 from app.data.indicators import add_indicators
 from app.data.loader import DataLoader
 from app.data.universe import load_symbols
 from app.engine.scorer import Scorer
+from app.features.relative_strength import assign_relative_strength_percentiles
 from app.models.stock_result import StockResult
 
 logger = get_logger(__name__)
@@ -29,16 +31,29 @@ class Scanner:
         if not universe:
             raise ValueError("At least one symbol is required")
 
-        benchmark_frame = add_indicators(self._loader.load(self._benchmark_symbol))
-        market_trend, benchmark_return = benchmark_metrics(benchmark_frame)
+        benchmark = self._load_benchmark()
         results: list[StockResult] = []
         for symbol in universe:
             try:
                 frame = add_indicators(self._loader.load(symbol))
-                facts = build_facts(symbol, frame, market_trend, benchmark_return)
+                facts = build_facts(symbol, frame, benchmark)
                 results.append(self._scorer.score(facts))
             except (ValueError, RuntimeError) as exc:
                 logger.warning("Skipping %s: %s", symbol, exc)
 
+        results = assign_relative_strength_percentiles(results)
+        results = [self._scorer.score(result.facts) for result in results]
         results.sort(key=lambda result: (-result.final_score, result.symbol))
         return [result.model_copy(update={"rank": rank}) for rank, result in enumerate(results, 1)]
+
+    def _load_benchmark(self) -> BenchmarkSnapshot:
+        """Load the configured benchmark, falling back to NIFTY 50 when necessary."""
+        failures: list[str] = []
+        for symbol in dict.fromkeys((self._benchmark_symbol, DEFAULT_BENCHMARK)):
+            try:
+                frame = add_indicators(self._loader.load(symbol))
+                return build_benchmark_snapshot(symbol, frame)
+            except (ValueError, RuntimeError) as exc:
+                failures.append(f"{symbol}: {exc}")
+                logger.warning("Benchmark %s unavailable: %s", symbol, exc)
+        raise RuntimeError(f"No benchmark data available ({'; '.join(failures)})")

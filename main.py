@@ -106,7 +106,11 @@ def cli(arguments: Sequence[str] | None = None) -> int:
     parsed = parser.parse_args(arguments)
     results = build_scanner().scan(parsed.symbols)
     for result in results:
-        print(f"{result.rank:>3} {result.symbol:<20} {result.final_score:>6.2f}")
+        print(
+            f"{result.rank:>3} {result.symbol:<20} {result.final_score:>6.2f} "
+            f"RS {result.features['relative_strength'].score:>6.2f} "
+            f"Pctl {result.facts.relative_strength_percentile:>6.2f}"
+        )
     if parsed.output:
         report = generate_excel_report(results, parsed.output)
         print(f"Report written to {report}")
