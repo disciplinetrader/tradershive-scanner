@@ -4,6 +4,7 @@ from app.features.market import MarketFeature
 from app.features.momentum import MomentumFeature
 from app.features.relative_strength import RelativeStrengthFeature
 from app.features.sector import SectorFeature
+from app.features.setup import SetupFeature
 from app.features.stock import StockFeature
 from app.features.trend import TrendFeature
 from app.features.volatility import VolatilityFeature
@@ -18,6 +19,7 @@ def test_all_bullish_features_return_valid_explainable_scores(bullish_facts: Fac
         MarketFeature(),
         SectorFeature(),
         StockFeature(),
+        SetupFeature(),
         TrendFeature(),
         RelativeStrengthFeature(),
         MomentumFeature(),
@@ -37,6 +39,7 @@ def test_bullish_facts_score_highly(bullish_facts: Facts) -> None:
     assert MarketFeature().evaluate(bullish_facts).score == 100
     assert SectorFeature().evaluate(bullish_facts).score == 95
     assert StockFeature().evaluate(bullish_facts).score == 94
+    assert SetupFeature().evaluate(bullish_facts).score == bullish_facts.setup_score
     assert TrendFeature().evaluate(bullish_facts).score == 100
     assert RelativeStrengthFeature().evaluate(bullish_facts).score >= 80
     assert MomentumFeature().evaluate(bullish_facts).score >= 90

@@ -15,6 +15,7 @@ from app.features.relative_strength import (
     assign_relative_strength_percentiles,
 )
 from app.features.sector import SectorFeature
+from app.features.setup import SetupFeature
 from app.features.stock import StockFeature
 from app.features.trend import TrendFeature
 from app.features.volatility import VolatilityFeature
@@ -154,6 +155,7 @@ def _production_scorer() -> Scorer:
             MarketFeature(),
             SectorFeature(),
             StockFeature(),
+            SetupFeature(),
             TrendFeature(),
             RelativeStrengthFeature(),
             MomentumFeature(),

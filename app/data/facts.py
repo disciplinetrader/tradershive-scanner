@@ -10,6 +10,7 @@ from app.models.facts import Facts
 from app.models.market import MarketProfile, MarketRegime
 from app.models.relative_strength import RelativeStrengthHorizon, RelativeStrengthProfile
 from app.models.sector import SectorProfile, SectorRotation
+from app.models.setup import SetupProfile
 from app.models.stock import StockProfile
 
 
@@ -21,6 +22,7 @@ def build_facts(
     sector_profile: SectorProfile | None = None,
     sector_name: str = "Unclassified",
     stock_profile: StockProfile | None = None,
+    setup_profile: SetupProfile | None = None,
 ) -> Facts:
     """Build immutable facts from the latest complete indicator row."""
     required = {
@@ -90,6 +92,10 @@ def build_facts(
         from app.engine.stock import StockEngine
 
         stock_profile = StockEngine().analyze(symbol, frame)
+    if setup_profile is None:
+        from app.engine.setup import SetupEngine
+
+        setup_profile = SetupEngine().analyze(symbol, frame, stock_profile)
     return Facts(
         symbol=symbol.upper(),
         close=close,
@@ -120,6 +126,13 @@ def build_facts(
         stock_score=stock_profile.score,
         stock_grade=stock_profile.grade,
         stock_profile=stock_profile,
+        setup_score=setup_profile.score,
+        setup_grade=setup_profile.grade,
+        setup_type=setup_profile.best_setup_type,
+        setup_profile=setup_profile,
+        pivot_price=setup_profile.facts.pivot_price,
+        invalidation_price=setup_profile.facts.invalidation_price,
+        breakout_distance_percent=setup_profile.facts.breakout_distance_percent,
         ema_alignment=close > ema20 > ema50 > ema200,
         near_52_week_high=distance_from_high <= 0.10,
         distance_from_high=distance_from_high,

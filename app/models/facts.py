@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.models.market import MarketRegime
 from app.models.relative_strength import RelativeStrengthProfile
 from app.models.sector import SectorRotation
+from app.models.setup import SetupProfile, SetupType
 from app.models.stock import StockGrade, StockProfile
 
 
@@ -38,6 +39,13 @@ class Facts(BaseModel):
     stock_score: float = Field(ge=0, le=100)
     stock_grade: StockGrade
     stock_profile: StockProfile
+    setup_score: float = Field(ge=0, le=100)
+    setup_grade: StockGrade
+    setup_type: SetupType
+    setup_profile: SetupProfile
+    pivot_price: float = Field(gt=0)
+    invalidation_price: float = Field(gt=0)
+    breakout_distance_percent: float = Field(ge=0)
     ema_alignment: bool
     near_52_week_high: bool
     distance_from_high: float = Field(ge=0)

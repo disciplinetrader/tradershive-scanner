@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from app.engine.setup import SetupEngine
 from app.models.facts import Facts
 from app.models.market import MarketRegime
 from app.models.relative_strength import RelativeStrengthHorizon, RelativeStrengthProfile
@@ -35,7 +36,7 @@ def rising_frame() -> pd.DataFrame:
 
 
 @pytest.fixture
-def bullish_facts() -> Facts:
+def bullish_facts(rising_frame: pd.DataFrame) -> Facts:
     """Return complete facts representing a liquid bullish stock."""
     stock_facts = StockFacts(
         symbol="TEST.NS",
@@ -87,6 +88,7 @@ def bullish_facts() -> Facts:
         reasons=("Perfect EMA alignment", "Strong trend persistence", "Strong participation"),
         facts=stock_facts,
     )
+    setup_profile = SetupEngine().analyze("TEST.NS", rising_frame, stock_profile)
     return Facts(
         symbol="TEST.NS",
         close=100,
@@ -113,6 +115,13 @@ def bullish_facts() -> Facts:
         stock_score=stock_profile.score,
         stock_grade=stock_profile.grade,
         stock_profile=stock_profile,
+        setup_score=setup_profile.score,
+        setup_grade=setup_profile.grade,
+        setup_type=setup_profile.best_setup_type,
+        setup_profile=setup_profile,
+        pivot_price=setup_profile.facts.pivot_price,
+        invalidation_price=setup_profile.facts.invalidation_price,
+        breakout_distance_percent=setup_profile.facts.breakout_distance_percent,
         ema_alignment=True,
         near_52_week_high=True,
         distance_from_high=0.0476,
@@ -150,6 +159,7 @@ def feature_names() -> Iterator[str]:
         "market",
         "sector",
         "stock",
+        "setup",
         "trend",
         "relative_strength",
         "momentum",

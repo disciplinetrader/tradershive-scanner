@@ -9,6 +9,7 @@ from app.features.market import MarketFeature
 from app.features.momentum import MomentumFeature
 from app.features.relative_strength import RelativeStrengthFeature
 from app.features.sector import SectorFeature
+from app.features.setup import SetupFeature
 from app.features.stock import StockFeature
 from app.features.trend import TrendFeature
 from app.features.volatility import VolatilityFeature
@@ -23,6 +24,7 @@ def production_registry() -> FeatureRegistry:
             MarketFeature(),
             SectorFeature(),
             StockFeature(),
+            SetupFeature(),
             TrendFeature(),
             RelativeStrengthFeature(),
             MomentumFeature(),

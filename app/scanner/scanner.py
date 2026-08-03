@@ -12,6 +12,7 @@ from app.data.universe import load_symbols
 from app.engine.market import MarketEngine
 from app.engine.scorer import Scorer
 from app.engine.sector import SectorEngine
+from app.engine.setup import SetupEngine
 from app.engine.stock import StockEngine
 from app.features.relative_strength import assign_relative_strength_percentiles
 from app.models.stock_result import StockResult
@@ -30,6 +31,7 @@ class Scanner:
         market_engine: MarketEngine | None = None,
         sector_engine: SectorEngine | None = None,
         stock_engine: StockEngine | None = None,
+        setup_engine: SetupEngine | None = None,
     ) -> None:
         """Initialize the scanner with explicit, replaceable collaborators."""
         self._loader = loader
@@ -38,6 +40,7 @@ class Scanner:
         self._market_engine = market_engine or MarketEngine(loader)
         self._sector_engine = sector_engine or SectorEngine()
         self._stock_engine = stock_engine or StockEngine()
+        self._setup_engine = setup_engine or SetupEngine()
 
     def scan(
         self,
@@ -64,6 +67,7 @@ class Scanner:
                 sector_name = sector_analysis.symbol_sectors.get(symbol, "Unclassified")
                 sector_profile = sector_analysis.sectors.get(sector_name)
                 stock_profile = self._stock_engine.analyze(symbol, frame)
+                setup_profile = self._setup_engine.analyze(symbol, frame, stock_profile)
                 facts = build_facts(
                     symbol,
                     frame,
@@ -72,6 +76,7 @@ class Scanner:
                     sector_profile,
                     sector_name,
                     stock_profile,
+                    setup_profile,
                 )
                 results.append(self._scorer.score(facts))
             except (ValueError, RuntimeError) as exc:

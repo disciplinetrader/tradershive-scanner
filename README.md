@@ -21,6 +21,8 @@ Sector leadership, member mapping, ranking, and rotation are documented in
 [`docs/sector-intelligence-engine.md`](docs/sector-intelligence-engine.md).
 Intrinsic trend, momentum, participation, health, and grading are documented in
 [`docs/stock-intelligence-engine.md`](docs/stock-intelligence-engine.md).
+Objective price-volume setup detection and scoring are documented in
+[`docs/setup-intelligence-engine.md`](docs/setup-intelligence-engine.md).
 
 ## Setup
 

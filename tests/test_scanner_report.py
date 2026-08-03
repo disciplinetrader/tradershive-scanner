@@ -13,6 +13,7 @@ from app.features.market import MarketFeature
 from app.features.momentum import MomentumFeature
 from app.features.relative_strength import RelativeStrengthFeature
 from app.features.sector import SectorFeature
+from app.features.setup import SetupFeature
 from app.features.stock import StockFeature
 from app.features.trend import TrendFeature
 from app.features.volatility import VolatilityFeature
@@ -47,6 +48,7 @@ def build_test_scanner(frame: pd.DataFrame) -> Scanner:
             MarketFeature(),
             SectorFeature(),
             StockFeature(),
+            SetupFeature(),
             TrendFeature(),
             RelativeStrengthFeature(),
             MomentumFeature(),
@@ -71,12 +73,18 @@ def test_scanner_ranks_results_and_report_contains_expected_columns(
     sheet = workbook["Momentum Scanner"]
     headers = [cell.value for cell in sheet[1]]
     assert headers[:3] == ["Rank", "Symbol", "Score"]
-    assert headers[:11] == [
+    assert headers[:17] == [
         "Rank",
         "Symbol",
         "Score",
         "Stock Grade",
         "Stock Score",
+        "Setup Type",
+        "Setup Grade",
+        "Setup Score",
+        "Pivot Price",
+        "Invalidation Price",
+        "Breakout Distance %",
         "RS",
         "Percentile",
         "Sector",

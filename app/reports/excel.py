@@ -25,6 +25,12 @@ def generate_excel_report(results: Sequence[StockResult], destination: Path) -> 
         "Score",
         "Stock Grade",
         "Stock Score",
+        "Setup Type",
+        "Setup Grade",
+        "Setup Score",
+        "Pivot Price",
+        "Invalidation Price",
+        "Breakout Distance %",
         "RS",
         "Percentile",
         "Sector",
@@ -50,6 +56,12 @@ def generate_excel_report(results: Sequence[StockResult], destination: Path) -> 
             result.final_score,
             result.facts.stock_grade.value,
             result.facts.stock_score,
+            result.facts.setup_type.value,
+            result.facts.setup_grade.value,
+            result.facts.setup_score,
+            result.facts.pivot_price,
+            result.facts.invalidation_price,
+            result.facts.breakout_distance_percent,
             result.features["relative_strength"].score,
             result.facts.relative_strength_percentile,
             result.facts.sector_name,
@@ -84,7 +96,7 @@ def generate_excel_report(results: Sequence[StockResult], destination: Path) -> 
     for index, header in enumerate(headers, 1):
         width = 80 if header == "Reasons" else max(12, min(24, len(header) + 2))
         sheet.column_dimensions[get_column_letter(index)].width = width
-    for row in sheet.iter_rows(min_row=2, min_col=3, max_col=16):
+    for row in sheet.iter_rows(min_row=2, min_col=3, max_col=22):
         for cell in row:
             cell.number_format = "0.00"
     workbook.save(temporary)

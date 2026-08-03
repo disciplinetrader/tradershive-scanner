@@ -22,11 +22,12 @@ FEATURE_WEIGHTS = MappingProxyType(
         "market": 0.10,
         "sector": 0.15,
         "stock": 0.15,
-        "trend": 0.16,
-        "relative_strength": 0.15,
-        "momentum": 0.13,
-        "volume": 0.09,
-        "volatility": 0.07,
+        "setup": 0.15,
+        "trend": 0.12,
+        "relative_strength": 0.12,
+        "momentum": 0.09,
+        "volume": 0.07,
+        "volatility": 0.05,
     }
 )
 RELATIVE_STRENGTH_PERIOD_WEIGHTS = MappingProxyType(
