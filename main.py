@@ -2,6 +2,7 @@
 
 import argparse
 from collections.abc import Sequence
+from datetime import timedelta
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
@@ -10,6 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.core.config import Settings, get_settings
 from app.core.constants import FEATURE_WEIGHTS
 from app.core.logging import configure_logging
+from app.data.cache import MarketDataCache
 from app.data.loader import DataLoader
 from app.engine.registry import FeatureRegistry
 from app.engine.scorer import Scorer
@@ -59,7 +61,11 @@ def build_scanner(settings: Settings | None = None) -> Scanner:
     """Construct a scanner wired to the production Yahoo provider."""
     resolved_settings = settings or get_settings()
     provider = YahooFinanceProvider()
-    loader = DataLoader(provider, resolved_settings.history_period)
+    cache = MarketDataCache(
+        resolved_settings.market_data_cache_directory,
+        timedelta(seconds=resolved_settings.market_data_cache_ttl_seconds),
+    )
+    loader = DataLoader(provider, resolved_settings.history_period, cache)
     return Scanner(loader, build_scorer(), resolved_settings.benchmark_symbol)
 
 

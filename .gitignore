@@ -2,15 +2,16 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 .ruff_cache/
+.cache/
 .coverage
 htmlcov/
 .venv/
 venv/
 .env
 reports/*.xlsx
+benchmark-results/
 dist/
 build/
 *.egg-info/
 .idea/
 .vscode/
-

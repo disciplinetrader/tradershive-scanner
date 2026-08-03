@@ -11,6 +11,9 @@ adapters; `app/data/` validates bars and calculates facts; `app/features/` conta
 scoring rules; `app/engine/` aggregates scores; and `app/scanner/` coordinates the workflow.
 Pydantic models form validated boundaries between those layers.
 
+Detailed normalization, retry, cache, and provider-extension behavior is documented in
+[`docs/data-engine.md`](docs/data-engine.md).
+
 ## Setup
 
 Python 3.12 is required. Create and activate a virtual environment, then install the application
@@ -23,8 +26,9 @@ python -m pip install -e ".[dev]"
 ```
 
 Optional environment variables include `BENCHMARK_SYMBOL` (default `^NSEI`), `HISTORY_PERIOD`
-(default `2y`), `LOG_LEVEL`, and `REPORT_DIRECTORY`. Copy these into a local `.env` file when
-needed; never commit credentials.
+(default `2y`), `LOG_LEVEL`, `REPORT_DIRECTORY`, `MARKET_DATA_CACHE_DIRECTORY`, and
+`MARKET_DATA_CACHE_TTL_SECONDS`. Copy these into a local `.env` file when needed; never commit
+credentials.
 
 ## Run
 
@@ -51,6 +55,7 @@ and skipped so one bad ticker does not abort the universe.
 python -m black --check .
 python -m ruff check .
 python -m pytest
+python scripts/benchmark_data_engine.py
 ```
 
 Scanner scores are screening signals, not investment advice. Yahoo Finance availability and data

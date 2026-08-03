@@ -15,3 +15,8 @@ class MarketDataProvider(ABC):
     @abstractmethod
     def history(self, symbol: str, period: str) -> pd.DataFrame:
         """Return normalized daily OHLCV history for a symbol."""
+
+    @property
+    def cache_namespace(self) -> str:
+        """Return a stable cache namespace for this provider implementation."""
+        return f"{type(self).__module__}.{type(self).__qualname__}"
