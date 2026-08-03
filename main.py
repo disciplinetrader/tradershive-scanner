@@ -15,6 +15,7 @@ from app.core.v11_config import ScannerProfileConfig, ScannerProfileName
 from app.data.cache import MarketDataCache
 from app.data.loader import DataLoader
 from app.data.sectors import load_sector_assignments
+from app.data.universe import SUPPORTED_UNIVERSES, UniverseError, UniverseResolver
 from app.engine.registry import FeatureRegistry
 from app.engine.scorer import Scorer
 from app.features.avwap import AVWAPFeature
@@ -123,11 +124,42 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 app = create_app()
 
 
+def _report_destination(
+    explicit_output: Path | None,
+    used_default_universe: bool,
+    settings: Settings,
+) -> Path | None:
+    """Resolve explicit or configured automatic Excel output without changing scan behavior."""
+    if explicit_output is not None:
+        return explicit_output
+    if used_default_universe and settings.auto_generate_reports:
+        return settings.report_directory / settings.default_report_filename
+    return None
+
+
 def cli(arguments: Sequence[str] | None = None) -> int:
     """Run a scan from the command line and optionally generate Excel."""
     parser = argparse.ArgumentParser(description="Scan Indian equities for momentum")
-    parser.add_argument("symbols", nargs="+", help="NSE symbols such as RELIANCE or TCS")
-    parser.add_argument("--output", type=Path, help="Optional output .xlsx path")
+    parser.add_argument(
+        "symbols",
+        nargs="*",
+        help="Optional NSE symbols such as RELIANCE or TCS; omit to use the default universe",
+    )
+    parser.add_argument(
+        "--universe",
+        choices=SUPPORTED_UNIVERSES,
+        help="Named universe used when symbols are omitted (default: DEFAULT_UNIVERSE)",
+    )
+    parser.add_argument(
+        "--custom-universe-file",
+        type=Path,
+        help="Text/CSV symbol file used with --universe custom",
+    )
+    parser.add_argument(
+        "--output",
+        type=Path,
+        help="Excel output path; no-symbol scans otherwise use configured report output",
+    )
     parser.add_argument(
         "--sector-map",
         type=Path,
@@ -141,12 +173,27 @@ def cli(arguments: Sequence[str] | None = None) -> int:
     )
     parser.add_argument("--detailed", action="store_true")
     parsed = parser.parse_args(arguments)
+    settings = get_settings()
+    universe_name = parsed.universe or settings.default_universe
+    custom_file = parsed.custom_universe_file or settings.custom_universe_file
+    if parsed.symbols:
+        symbols = parsed.symbols
+    else:
+        resolver = UniverseResolver(
+            settings.universe_cache_directory,
+            settings.universe_cache_ttl_seconds,
+            settings.request_timeout_seconds,
+        )
+        try:
+            symbols = resolver.resolve(universe_name, custom_file)
+        except (UniverseError, FileNotFoundError) as exc:
+            parser.error(str(exc))
     sector_assignments = load_sector_assignments(parsed.sector_map) if parsed.sector_map else None
     industry_assignments = (
         load_sector_assignments(parsed.industry_map) if parsed.industry_map else None
     )
-    results = build_scanner().scan(
-        parsed.symbols,
+    results = build_scanner(settings).scan(
+        symbols,
         sector_assignments,
         industry_assignments,
         ScannerProfileConfig(name=ScannerProfileName(parsed.profile)),
@@ -193,8 +240,9 @@ def cli(arguments: Sequence[str] | None = None) -> int:
             )
             print(f"    Reasons: {' | '.join(decision.reasons)}")
             print(f"    Warnings: {' | '.join(decision.warnings)}")
-    if parsed.output:
-        report = generate_excel_report(results, parsed.output)
+    report_destination = _report_destination(parsed.output, not parsed.symbols, settings)
+    if report_destination and results:
+        report = generate_excel_report(results, report_destination)
         print(f"Report written to {report}")
     return 0
 

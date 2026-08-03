@@ -133,6 +133,14 @@ class Settings(BaseModel):
     report_directory: Path = Path("reports")
     market_data_cache_directory: Path = Path(".cache/market-data")
     market_data_cache_ttl_seconds: int = Field(default=21_600, ge=60, le=604_800)
+    default_universe: str = Field(
+        default="nifty50", pattern=r"^(nifty50|nifty100|nifty200|nifty500|all|custom)$"
+    )
+    custom_universe_file: Path | None = None
+    universe_cache_directory: Path = Path(".cache/universes")
+    universe_cache_ttl_seconds: int = Field(default=86_400, ge=60, le=604_800)
+    auto_generate_reports: bool = True
+    default_report_filename: str = Field(default="tradershive-eod.xlsx", pattern=r"^[^/\\]+\.xlsx$")
 
 
 @lru_cache(maxsize=1)
@@ -149,4 +157,11 @@ def get_settings() -> Settings:
             getenv("MARKET_DATA_CACHE_DIRECTORY", ".cache/market-data")
         ),
         market_data_cache_ttl_seconds=int(getenv("MARKET_DATA_CACHE_TTL_SECONDS", "21600")),
+        default_universe=getenv("DEFAULT_UNIVERSE", "nifty50").lower(),
+        custom_universe_file=(Path(value) if (value := getenv("CUSTOM_UNIVERSE_FILE")) else None),
+        universe_cache_directory=Path(getenv("UNIVERSE_CACHE_DIRECTORY", ".cache/universes")),
+        universe_cache_ttl_seconds=int(getenv("UNIVERSE_CACHE_TTL_SECONDS", "86400")),
+        auto_generate_reports=getenv("AUTO_GENERATE_REPORTS", "true").lower()
+        in {"1", "true", "yes", "on"},
+        default_report_filename=getenv("DEFAULT_REPORT_FILENAME", "tradershive-eod.xlsx"),
     )

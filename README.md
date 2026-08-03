@@ -61,6 +61,13 @@ Run the CLI and create a report with:
 python main.py RELIANCE TCS INFY --output reports/momentum.xlsx
 ```
 
+Running `python main.py` with no positional symbols loads `DEFAULT_UNIVERSE` (default `nifty50`),
+prints the Situation Summary and Top 20, and writes
+`REPORT_DIRECTORY/DEFAULT_REPORT_FILENAME`. Select another official NSE universe with
+`--universe nifty100`, `nifty200`, `nifty500`, or `all`. Use `--universe custom` with
+`--custom-universe-file path/to/symbols.csv` for a maintained local list. Constituents are cached
+under `UNIVERSE_CACHE_DIRECTORY`; explicit positional symbols continue to override the universe.
+
 Symbols without a suffix are normalized to Yahoo's `.NS` convention. The broad-market benchmark
 is downloaded once per scan. Individual symbols with invalid or insufficient history are logged
 and skipped so one bad ticker does not abort the universe.
