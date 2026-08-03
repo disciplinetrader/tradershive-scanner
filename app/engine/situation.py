@@ -3,6 +3,7 @@
 from collections.abc import Sequence
 
 from app.models.breadth import BreadthProfile, BreadthState
+from app.models.cpr import CPRProfile, CPRState
 from app.models.decision import DecisionAction, DecisionProfile
 from app.models.market import MarketProfile, MarketRegime
 from app.models.relative_strength import RelativeStrengthProfile
@@ -35,6 +36,7 @@ class SituationEngine:
         risks: Sequence[RiskProfile],
         decisions: Sequence[DecisionProfile],
         breadth: BreadthProfile | None = None,
+        cprs: Sequence[CPRProfile] = (),
     ) -> SituationProfile:
         """Return one shared situation without recalculating subordinate work."""
         leadership = self._leadership(sectors)
@@ -42,6 +44,7 @@ class SituationEngine:
         money_flow = self._money_flow(market, sectors, decisions, breadth)
         bias, aggression = self._base_posture(market.state)
         warnings: list[str] = []
+        cpr_environment, cpr_participation = self._cpr_environment(cprs)
         if market.breadth.percentage_above_ema50 < 40:
             aggression = self._downgrade(aggression)
             warnings.append("Weak breadth requires reduced aggression")
@@ -51,6 +54,9 @@ class SituationEngine:
         if risk_environment in {RiskEnvironment.HIGH, RiskEnvironment.EXTREME}:
             aggression = self._downgrade(aggression)
             warnings.append(f"{risk_environment.value} risk environment")
+        if cprs and cpr_environment == "Range Favored":
+            aggression = self._downgrade(aggression)
+            warnings.append("CPR structures favor range behavior")
         if market.state in {MarketRegime.BEAR, MarketRegime.CAPITULATION}:
             bias = TradingBias.CASH
             aggression = Aggression.VERY_LOW
@@ -65,10 +71,13 @@ class SituationEngine:
             decisions,
             risk_environment,
             breadth,
+            cprs,
         )
         return SituationProfile(
             market_regime=market.state,
             breadth_profile=breadth,
+            cpr_environment=cpr_environment,
+            cpr_breakout_participation=cpr_participation,
             trading_bias=bias,
             aggression=aggression,
             recommended_setup_types=setup_types,
@@ -103,6 +112,22 @@ class SituationEngine:
             improving_sectors=improving,
             weakening_sectors=weakening,
         )
+
+    @staticmethod
+    def _cpr_environment(cprs: Sequence[CPRProfile]) -> tuple[str, float]:
+        """Summarize existing stock-level CPR expansion participation."""
+        if not cprs:
+            return "Unavailable", 0
+        breakout_share = sum(profile.breakout_probability >= 70 for profile in cprs) / len(cprs)
+        trending_share = sum(profile.cpr_state == CPRState.TRENDING for profile in cprs) / len(cprs)
+        range_share = sum(profile.range_probability >= 65 for profile in cprs) / len(cprs)
+        if breakout_share >= 0.50 or trending_share >= 0.50:
+            state = "Expansion Favorable"
+        elif range_share >= 0.50:
+            state = "Range Favored"
+        else:
+            state = "Mixed"
+        return state, round(breakout_share * 100, 2)
 
     @staticmethod
     def _risk_environment(market: MarketProfile, risks: Sequence[RiskProfile]) -> RiskEnvironment:
@@ -245,11 +270,17 @@ class SituationEngine:
         decisions: Sequence[DecisionProfile],
         risk_environment: RiskEnvironment,
         breadth: BreadthProfile | None,
+        cprs: Sequence[CPRProfile],
     ) -> tuple[str, ...]:
         """Explain the posture using already-calculated evidence."""
         reasons = list(market.reasons[:3])
         if breadth:
             reasons.extend(breadth.reasons[:2])
+        if cprs:
+            expansion_share = sum(profile.breakout_probability >= 70 for profile in cprs) / len(
+                cprs
+            )
+            reasons.append(f"{expansion_share:.0%} show high-probability CPR expansion")
         improving = sum(profile.rotation == SectorRotation.IMPROVING for profile in sectors)
         leading = sum(profile.rotation == SectorRotation.LEADING for profile in sectors)
         if improving or leading:

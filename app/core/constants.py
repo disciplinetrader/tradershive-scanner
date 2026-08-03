@@ -20,14 +20,15 @@ MARKET_BENCHMARKS = MappingProxyType(
 FEATURE_WEIGHTS = MappingProxyType(
     {
         "market": 0.06,
-        "breadth": 0.10,
-        "sector": 0.11,
-        "stock": 0.12,
-        "setup": 0.13,
-        "risk": 0.14,
-        "trend": 0.10,
-        "relative_strength": 0.10,
-        "momentum": 0.08,
+        "breadth": 0.09,
+        "cpr": 0.10,
+        "sector": 0.10,
+        "stock": 0.11,
+        "setup": 0.11,
+        "risk": 0.12,
+        "trend": 0.09,
+        "relative_strength": 0.09,
+        "momentum": 0.07,
         "volume": 0.04,
         "volatility": 0.02,
     }

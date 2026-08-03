@@ -6,6 +6,7 @@ from app.core.constants import FEATURE_WEIGHTS
 from app.engine.registry import FeatureRegistry
 from app.engine.scorer import Scorer
 from app.features.breadth import BreadthFeature
+from app.features.cpr import CPRFeature
 from app.features.market import MarketFeature
 from app.features.momentum import MomentumFeature
 from app.features.relative_strength import RelativeStrengthFeature
@@ -25,6 +26,7 @@ def production_registry() -> FeatureRegistry:
         [
             MarketFeature(),
             BreadthFeature(),
+            CPRFeature(),
             SectorFeature(),
             StockFeature(),
             SetupFeature(),

@@ -3,6 +3,7 @@
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.breadth import BreadthProfile
+from app.models.cpr import CPRProfile
 from app.models.market import MarketRegime
 from app.models.relative_strength import RelativeStrengthProfile
 from app.models.risk import RiskGrade, RiskProfile
@@ -35,6 +36,8 @@ class Facts(BaseModel):
     breadth_score: float = Field(ge=0, le=100)
     breadth_grade: StockGrade
     breadth_profile: BreadthProfile
+    cpr_score: float = Field(ge=0, le=100)
+    cpr_profile: CPRProfile
     sector_name: str = Field(min_length=1)
     sector_rank: int = Field(ge=0)
     sector_percentile: float = Field(ge=0, le=99)

@@ -22,4 +22,9 @@ class SituationFeature:
                 f"Breadth: {profile.breadth_profile.breadth_state.value} "
                 f"({profile.breadth_profile.score:.1f})",
             )
+        if profile.cpr_environment != "Unavailable":
+            lines += (
+                f"CPR: {profile.cpr_environment} "
+                f"({profile.cpr_breakout_participation:.0f}% breakout-ready)",
+            )
         return lines

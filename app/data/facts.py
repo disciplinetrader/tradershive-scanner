@@ -7,6 +7,7 @@ import pandas as pd
 from app.core.constants import RELATIVE_STRENGTH_HORIZONS
 from app.data.benchmark import BenchmarkSnapshot
 from app.models.breadth import BreadthProfile
+from app.models.cpr import CPRProfile
 from app.models.facts import Facts
 from app.models.market import MarketProfile, MarketRegime
 from app.models.relative_strength import RelativeStrengthHorizon, RelativeStrengthProfile
@@ -27,6 +28,7 @@ def build_facts(
     setup_profile: SetupProfile | None = None,
     volume_profile: VolumeProfile | None = None,
     breadth_profile: BreadthProfile | None = None,
+    cpr_profile: CPRProfile | None = None,
 ) -> Facts:
     """Build immutable facts from the latest complete indicator row."""
     required = {
@@ -108,6 +110,10 @@ def build_facts(
         from app.engine.breadth import BreadthEngine
 
         breadth_profile = BreadthEngine().analyze({symbol: frame})
+    if cpr_profile is None:
+        from app.engine.cpr import CPREngine
+
+        cpr_profile = CPREngine().analyze(symbol, frame)
     return Facts(
         symbol=symbol.upper(),
         close=close,
@@ -127,6 +133,8 @@ def build_facts(
         breadth_score=breadth_profile.score,
         breadth_grade=breadth_profile.grade,
         breadth_profile=breadth_profile,
+        cpr_score=cpr_profile.score,
+        cpr_profile=cpr_profile,
         sector_name=resolved_sector_name,
         sector_rank=sector_profile.rank if sector_profile else 0,
         sector_percentile=sector_profile.percentile if sector_profile else 0,

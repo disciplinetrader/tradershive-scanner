@@ -90,6 +90,7 @@ def _evaluate(
         facts.setup_profile,
         facts.risk_profile,
         facts.breadth_profile,
+        facts.cpr_profile,
     )
 
 

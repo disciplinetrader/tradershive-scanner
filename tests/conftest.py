@@ -7,6 +7,7 @@ import pandas as pd
 import pytest
 
 from app.engine.breadth import BreadthEngine
+from app.engine.cpr import CPREngine
 from app.engine.risk import RiskEngine
 from app.engine.setup import SetupEngine
 from app.engine.volume import VolumeEngine
@@ -96,6 +97,7 @@ def bullish_facts(rising_frame: pd.DataFrame) -> Facts:
     breadth_profile = (
         BreadthEngine().analyze({"TEST.NS": rising_frame}).model_copy(update={"confidence": 1})
     )
+    cpr_profile = CPREngine().analyze("TEST.NS", rising_frame)
     risk_setup_facts = setup_profile.facts.model_copy(
         update={
             "pivot_price": 100,
@@ -124,6 +126,8 @@ def bullish_facts(rising_frame: pd.DataFrame) -> Facts:
         breadth_score=breadth_profile.score,
         breadth_grade=breadth_profile.grade,
         breadth_profile=breadth_profile,
+        cpr_score=cpr_profile.score,
+        cpr_profile=cpr_profile,
         sector_name="Defence",
         sector_rank=1,
         sector_percentile=99,
@@ -191,6 +195,7 @@ def feature_names() -> Iterator[str]:
     yield from (
         "market",
         "breadth",
+        "cpr",
         "sector",
         "stock",
         "setup",

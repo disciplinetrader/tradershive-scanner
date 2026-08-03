@@ -46,4 +46,4 @@ class DecisionProfile(BaseModel):
     action: DecisionAction
     reasons: tuple[str, ...] = Field(min_length=1)
     warnings: tuple[str, ...]
-    weight_breakdown: dict[str, WeightedDecisionComponent] = Field(min_length=7, max_length=7)
+    weight_breakdown: dict[str, WeightedDecisionComponent] = Field(min_length=8, max_length=8)

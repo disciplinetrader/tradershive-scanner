@@ -156,4 +156,8 @@ def test_scanner_and_excel_expose_shared_situation(rising_frame, tmp_path) -> No
     assert workbook.sheetnames[0] == "Situation Summary"
     assert workbook["Situation Summary"]["A2"].value == "Market Regime"
     assert workbook["Situation Summary"]["A3"].value == "Breadth State"
+    assert "CPR Environment" in {
+        workbook["Situation Summary"].cell(row=row, column=1).value
+        for row in range(1, workbook["Situation Summary"].max_row + 1)
+    }
     assert results[0].decision_profile.action in DecisionAction

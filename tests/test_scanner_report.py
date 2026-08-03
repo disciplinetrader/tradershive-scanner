@@ -10,6 +10,7 @@ from app.data.loader import DataLoader
 from app.engine.registry import FeatureRegistry
 from app.engine.scorer import Scorer
 from app.features.breadth import BreadthFeature
+from app.features.cpr import CPRFeature
 from app.features.market import MarketFeature
 from app.features.momentum import MomentumFeature
 from app.features.relative_strength import RelativeStrengthFeature
@@ -49,6 +50,7 @@ def build_test_scanner(frame: pd.DataFrame) -> Scanner:
         [
             MarketFeature(),
             BreadthFeature(),
+            CPRFeature(),
             SectorFeature(),
             StockFeature(),
             SetupFeature(),
@@ -77,7 +79,7 @@ def test_scanner_ranks_results_and_report_contains_expected_columns(
     sheet = workbook["Momentum Scanner"]
     headers = [cell.value for cell in sheet[1]]
     assert headers[:3] == ["Rank", "Symbol", "Score"]
-    assert headers[:36] == [
+    assert headers[:42] == [
         "Rank",
         "Symbol",
         "Score",
@@ -92,6 +94,12 @@ def test_scanner_ranks_results_and_report_contains_expected_columns(
         "Breadth Score",
         "Breadth State",
         "Breadth Confidence",
+        "CPR Grade",
+        "CPR Score",
+        "CPR State",
+        "CPR Breakout %",
+        "CPR Trend %",
+        "CPR Range %",
         "Volume Grade",
         "Volume Score",
         "Volume State",

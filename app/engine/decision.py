@@ -4,6 +4,7 @@ from collections.abc import Mapping
 
 from app.core.config import DEFAULT_DECISION_WEIGHTS, DecisionWeights
 from app.models.breadth import BreadthProfile, BreadthState
+from app.models.cpr import CPRProfile
 from app.models.decision import (
     DecisionAction,
     DecisionGrade,
@@ -39,6 +40,7 @@ class DecisionEngine:
         setup: SetupProfile | None,
         risk: RiskProfile | None,
         breadth: BreadthProfile | None = None,
+        cpr: CPRProfile | None = None,
     ) -> DecisionProfile:
         """Return one decision without recalculating subordinate intelligence."""
         regime = market.state if market else MarketRegime.RANGE
@@ -47,6 +49,7 @@ class DecisionEngine:
         observations: dict[str, tuple[float, float]] = {
             "market": (market.score, market.confidence) if market else (0, 0),
             "breadth": (breadth.score, breadth.confidence) if breadth else (0, 0),
+            "cpr": (cpr.score, cpr.confidence) if cpr else (0, 0),
             "sector": (sector.score, sector.confidence) if sector else (0, 0),
             "relative_strength": (rs_score, 1.0) if relative_strength else (0, 0),
             "stock": (stock.score, stock.confidence) if stock else (0, 0),
@@ -66,7 +69,7 @@ class DecisionEngine:
         decision_score = sum(item.contribution for item in breakdown.values())
         confidence = sum(item.confidence * item.weight for item in breakdown.values())
         action = self._action(
-            decision_score, confidence, regime, sector, stock, setup, risk, breadth
+            decision_score, confidence, regime, sector, stock, setup, risk, breadth, cpr
         )
         reasons, warnings = self._explain(
             market,
@@ -76,6 +79,7 @@ class DecisionEngine:
             setup,
             risk,
             breadth,
+            cpr,
             observations,
         )
         return DecisionProfile(
@@ -115,6 +119,7 @@ class DecisionEngine:
         setup: SetupProfile | None,
         risk: RiskProfile | None,
         breadth: BreadthProfile | None,
+        cpr: CPRProfile | None,
     ) -> DecisionAction:
         """Apply transparent action gates after adaptive score calculation."""
         hostile_market = regime in {
@@ -131,7 +136,16 @@ class DecisionEngine:
             breadth.score < 30
             or breadth.breadth_state in {BreadthState.DISTRIBUTION, BreadthState.CAPITULATION}
         )
-        if hostile_market or weak_sector or weak_setup or poor_risk or poor_breadth or score < 50:
+        poor_cpr = cpr is not None and cpr.score < 25 and cpr.range_probability >= 75
+        if (
+            hostile_market
+            or weak_sector
+            or weak_setup
+            or poor_risk
+            or poor_breadth
+            or poor_cpr
+            or score < 50
+        ):
             return DecisionAction.AVOID
         buy_regime = regime in {
             MarketRegime.HEALTHY_BULL,
@@ -174,6 +188,7 @@ class DecisionEngine:
         setup: SetupProfile | None,
         risk: RiskProfile | None,
         breadth: BreadthProfile | None,
+        cpr: CPRProfile | None,
         observations: Mapping[str, tuple[float, float]],
     ) -> tuple[tuple[str, ...], tuple[str, ...]]:
         """Generate concise reasons and warnings from existing profile evidence."""
@@ -184,6 +199,12 @@ class DecisionEngine:
         if breadth:
             reasons.append(f"{breadth.breadth_state.value} breadth")
             warnings.extend(breadth.warnings)
+        if cpr:
+            reasons.append(
+                f"{cpr.cpr_state.value} CPR with "
+                f"{cpr.breakout_probability:.0f}% breakout probability"
+            )
+            warnings.extend(cpr.warnings)
         if sector:
             reasons.append(f"{sector.rotation.value} {sector.facts.name} sector")
         if relative_strength:

@@ -85,6 +85,8 @@ class SituationProfile(BaseModel):
 
     market_regime: MarketRegime
     breadth_profile: BreadthProfile | None = None
+    cpr_environment: str = "Unavailable"
+    cpr_breakout_participation: float = Field(default=0, ge=0, le=100)
     trading_bias: TradingBias
     aggression: Aggression
     recommended_setup_types: tuple[RecommendedSetup, ...] = Field(min_length=1)

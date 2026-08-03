@@ -82,3 +82,6 @@ Volume behavior and institutional participation methodology are documented in
 
 Cross-sectional participation and market confirmation are documented in the
 [Breadth Intelligence Engine](docs/breadth-intelligence-engine.md).
+
+Daily, weekly, and monthly pivot-range structure is documented in the
+[CPR Intelligence Engine](docs/cpr-intelligence-engine.md).
