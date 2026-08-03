@@ -4,6 +4,7 @@ from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.models.avwap import AVWAPState
 from app.models.breadth import BreadthProfile
 from app.models.market import MarketRegime
 
@@ -87,6 +88,8 @@ class SituationProfile(BaseModel):
     breadth_profile: BreadthProfile | None = None
     cpr_environment: str = "Unavailable"
     cpr_breakout_participation: float = Field(default=0, ge=0, le=100)
+    avwap_environment: AVWAPState = AVWAPState.NEUTRAL
+    avwap_support_participation: float = Field(default=0, ge=0, le=100)
     trading_bias: TradingBias
     aggression: Aggression
     recommended_setup_types: tuple[RecommendedSetup, ...] = Field(min_length=1)

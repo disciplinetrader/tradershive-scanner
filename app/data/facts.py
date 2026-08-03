@@ -6,6 +6,7 @@ import pandas as pd
 
 from app.core.constants import RELATIVE_STRENGTH_HORIZONS
 from app.data.benchmark import BenchmarkSnapshot
+from app.models.avwap import AVWAPProfile
 from app.models.breadth import BreadthProfile
 from app.models.cpr import CPRProfile
 from app.models.facts import Facts
@@ -29,6 +30,7 @@ def build_facts(
     volume_profile: VolumeProfile | None = None,
     breadth_profile: BreadthProfile | None = None,
     cpr_profile: CPRProfile | None = None,
+    avwap_profile: AVWAPProfile | None = None,
 ) -> Facts:
     """Build immutable facts from the latest complete indicator row."""
     required = {
@@ -114,6 +116,10 @@ def build_facts(
         from app.engine.cpr import CPREngine
 
         cpr_profile = CPREngine().analyze(symbol, frame)
+    if avwap_profile is None:
+        from app.engine.avwap import AVWAPEngine
+
+        avwap_profile = AVWAPEngine().analyze(symbol, frame)
     return Facts(
         symbol=symbol.upper(),
         close=close,
@@ -135,6 +141,8 @@ def build_facts(
         breadth_profile=breadth_profile,
         cpr_score=cpr_profile.score,
         cpr_profile=cpr_profile,
+        avwap_score=avwap_profile.score,
+        avwap_profile=avwap_profile,
         sector_name=resolved_sector_name,
         sector_rank=sector_profile.rank if sector_profile else 0,
         sector_percentile=sector_profile.percentile if sector_profile else 0,

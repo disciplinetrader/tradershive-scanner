@@ -1,5 +1,6 @@
 """Unit tests for every built-in scoring module."""
 
+from app.features.avwap import AVWAPFeature
 from app.features.breadth import BreadthFeature
 from app.features.cpr import CPRFeature
 from app.features.market import MarketFeature
@@ -22,6 +23,7 @@ def test_all_bullish_features_return_valid_explainable_scores(bullish_facts: Fac
         MarketFeature(),
         BreadthFeature(),
         CPRFeature(),
+        AVWAPFeature(),
         SectorFeature(),
         StockFeature(),
         SetupFeature(),
@@ -45,6 +47,7 @@ def test_bullish_facts_score_highly(bullish_facts: Facts) -> None:
     assert MarketFeature().evaluate(bullish_facts).score == 100
     assert BreadthFeature().evaluate(bullish_facts).score == bullish_facts.breadth_score
     assert CPRFeature().evaluate(bullish_facts).score == bullish_facts.cpr_score
+    assert AVWAPFeature().evaluate(bullish_facts).score == bullish_facts.avwap_score
     assert SectorFeature().evaluate(bullish_facts).score == 95
     assert StockFeature().evaluate(bullish_facts).score == 94
     assert SetupFeature().evaluate(bullish_facts).score == bullish_facts.setup_score

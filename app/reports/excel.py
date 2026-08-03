@@ -67,6 +67,10 @@ def generate_excel_report(results: Sequence[StockResult], destination: Path) -> 
         "Market",
         "Momentum",
         "Volatility",
+        "AVWAP Grade",
+        "AVWAP Score",
+        "AVWAP State",
+        "AVWAP Alignment %",
         "Reasons",
     ]
 
@@ -127,6 +131,10 @@ def generate_excel_report(results: Sequence[StockResult], destination: Path) -> 
             result.features["market"].score,
             result.features["momentum"].score,
             result.features["volatility"].score,
+            result.facts.avwap_profile.grade.value,
+            result.facts.avwap_score,
+            result.facts.avwap_profile.state.value,
+            result.facts.avwap_profile.alignment_score,
             " | ".join(result.reasons),
         ]
         sheet.append(row)
@@ -173,6 +181,8 @@ def generate_excel_report(results: Sequence[StockResult], destination: Path) -> 
             ),
             ("CPR Environment", situation.cpr_environment),
             ("CPR Breakout Participation %", situation.cpr_breakout_participation),
+            ("AVWAP Environment", situation.avwap_environment.value),
+            ("AVWAP Support Participation %", situation.avwap_support_participation),
             ("Trading Bias", situation.trading_bias.value),
             ("Aggression", situation.aggression.value),
             ("Market Health", situation.market_health),

@@ -5,6 +5,7 @@ import pytest
 from app.core.constants import FEATURE_WEIGHTS
 from app.engine.registry import FeatureRegistry
 from app.engine.scorer import Scorer
+from app.features.avwap import AVWAPFeature
 from app.features.breadth import BreadthFeature
 from app.features.cpr import CPRFeature
 from app.features.market import MarketFeature
@@ -27,6 +28,7 @@ def production_registry() -> FeatureRegistry:
             MarketFeature(),
             BreadthFeature(),
             CPRFeature(),
+            AVWAPFeature(),
             SectorFeature(),
             StockFeature(),
             SetupFeature(),

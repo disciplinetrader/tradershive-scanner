@@ -9,6 +9,7 @@ from app.data.facts import build_facts
 from app.data.indicators import add_indicators
 from app.data.loader import DataLoader
 from app.data.universe import load_symbols
+from app.engine.avwap import AVWAPEngine
 from app.engine.breadth import BreadthEngine
 from app.engine.cpr import CPREngine
 from app.engine.decision import DecisionEngine
@@ -44,6 +45,7 @@ class Scanner:
         volume_engine: VolumeEngine | None = None,
         breadth_engine: BreadthEngine | None = None,
         cpr_engine: CPREngine | None = None,
+        avwap_engine: AVWAPEngine | None = None,
     ) -> None:
         """Initialize the scanner with explicit, replaceable collaborators."""
         self._loader = loader
@@ -59,6 +61,7 @@ class Scanner:
         self._volume_engine = volume_engine or VolumeEngine()
         self._breadth_engine = breadth_engine or BreadthEngine()
         self._cpr_engine = cpr_engine or CPREngine()
+        self._avwap_engine = avwap_engine or AVWAPEngine()
 
     def scan(
         self,
@@ -89,6 +92,7 @@ class Scanner:
                 setup_profile = self._setup_engine.analyze(symbol, frame, stock_profile)
                 volume_profile = self._volume_engine.analyze(symbol, frame)
                 cpr_profile = self._cpr_engine.analyze(symbol, frame)
+                avwap_profile = self._avwap_engine.analyze(symbol, frame)
                 facts = build_facts(
                     symbol,
                     frame,
@@ -101,6 +105,7 @@ class Scanner:
                     volume_profile,
                     breadth_profile,
                     cpr_profile,
+                    avwap_profile,
                 )
                 risk_profile = self._risk_engine.analyze(facts)
                 facts = facts.model_copy(
@@ -131,6 +136,7 @@ class Scanner:
                 result.facts.risk_profile,
                 breadth_profile,
                 result.facts.cpr_profile,
+                result.facts.avwap_profile,
             )
             decided_results.append(result.model_copy(update={"decision_profile": decision}))
         results = decided_results
@@ -144,6 +150,7 @@ class Scanner:
             tuple(result.decision_profile for result in results if result.decision_profile),
             breadth_profile,
             tuple(result.facts.cpr_profile for result in results),
+            tuple(result.facts.avwap_profile for result in results),
         )
         results = [result.model_copy(update={"situation_profile": situation}) for result in results]
         results.sort(key=lambda result: (-result.decision_score, result.symbol))

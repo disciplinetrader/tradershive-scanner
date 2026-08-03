@@ -2,6 +2,7 @@
 
 from collections.abc import Sequence
 
+from app.models.avwap import AVWAPProfile, AVWAPState
 from app.models.breadth import BreadthProfile, BreadthState
 from app.models.cpr import CPRProfile, CPRState
 from app.models.decision import DecisionAction, DecisionProfile
@@ -37,6 +38,7 @@ class SituationEngine:
         decisions: Sequence[DecisionProfile],
         breadth: BreadthProfile | None = None,
         cprs: Sequence[CPRProfile] = (),
+        avwaps: Sequence[AVWAPProfile] = (),
     ) -> SituationProfile:
         """Return one shared situation without recalculating subordinate work."""
         leadership = self._leadership(sectors)
@@ -45,6 +47,7 @@ class SituationEngine:
         bias, aggression = self._base_posture(market.state)
         warnings: list[str] = []
         cpr_environment, cpr_participation = self._cpr_environment(cprs)
+        avwap_environment, avwap_participation = self._avwap_environment(avwaps)
         if market.breadth.percentage_above_ema50 < 40:
             aggression = self._downgrade(aggression)
             warnings.append("Weak breadth requires reduced aggression")
@@ -78,6 +81,8 @@ class SituationEngine:
             breadth_profile=breadth,
             cpr_environment=cpr_environment,
             cpr_breakout_participation=cpr_participation,
+            avwap_environment=avwap_environment,
+            avwap_support_participation=avwap_participation,
             trading_bias=bias,
             aggression=aggression,
             recommended_setup_types=setup_types,
@@ -128,6 +133,25 @@ class SituationEngine:
         else:
             state = "Mixed"
         return state, round(breakout_share * 100, 2)
+
+    @staticmethod
+    def _avwap_environment(profiles: Sequence[AVWAPProfile]) -> tuple[AVWAPState, float]:
+        """Summarize institutional cost-basis support across the universe."""
+        if not profiles:
+            return AVWAPState.NEUTRAL, 0.0
+        support_share = sum(profile.alignment_score >= 60 for profile in profiles) / len(profiles)
+        average = sum(profile.score for profile in profiles) / len(profiles)
+        if average >= 75:
+            state = AVWAPState.STRONG_SUPPORT
+        elif average >= 55:
+            state = AVWAPState.SUPPORT
+        elif average < 25:
+            state = AVWAPState.STRONG_RESISTANCE
+        elif average < 45:
+            state = AVWAPState.RESISTANCE
+        else:
+            state = AVWAPState.NEUTRAL
+        return state, round(support_share * 100, 2)
 
     @staticmethod
     def _risk_environment(market: MarketProfile, risks: Sequence[RiskProfile]) -> RiskEnvironment:

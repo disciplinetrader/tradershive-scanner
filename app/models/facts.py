@@ -2,6 +2,7 @@
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.models.avwap import AVWAPProfile
 from app.models.breadth import BreadthProfile
 from app.models.cpr import CPRProfile
 from app.models.market import MarketRegime
@@ -38,6 +39,8 @@ class Facts(BaseModel):
     breadth_profile: BreadthProfile
     cpr_score: float = Field(ge=0, le=100)
     cpr_profile: CPRProfile
+    avwap_score: float = Field(ge=0, le=100)
+    avwap_profile: AVWAPProfile
     sector_name: str = Field(min_length=1)
     sector_rank: int = Field(ge=0)
     sector_percentile: float = Field(ge=0, le=99)

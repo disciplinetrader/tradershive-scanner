@@ -16,6 +16,7 @@ from app.data.loader import DataLoader
 from app.data.sectors import load_sector_assignments
 from app.engine.registry import FeatureRegistry
 from app.engine.scorer import Scorer
+from app.features.avwap import AVWAPFeature
 from app.features.breadth import BreadthFeature
 from app.features.cpr import CPRFeature
 from app.features.market import MarketFeature
@@ -58,6 +59,7 @@ def build_scorer() -> Scorer:
             MarketFeature(),
             BreadthFeature(),
             CPRFeature(),
+            AVWAPFeature(),
             SectorFeature(),
             StockFeature(),
             SetupFeature(),
@@ -145,6 +147,7 @@ def cli(arguments: Sequence[str] | None = None) -> int:
             f"BreadthState {result.facts.breadth_profile.breadth_state.value:<22} "
             f"CPR {result.facts.cpr_profile.cpr_state.value:<16} "
             f"CPRBreakout {result.facts.cpr_profile.breakout_probability:>5.1f}% "
+            f"AVWAP {result.facts.avwap_profile.state.value:<17} "
             f"Grade {result.facts.stock_grade.value:<2} "
             f"Setup {result.facts.setup_type.value:<16} "
             f"SetupGrade {result.facts.setup_grade.value:<2} "

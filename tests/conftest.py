@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from app.engine.avwap import AVWAPEngine
 from app.engine.breadth import BreadthEngine
 from app.engine.cpr import CPREngine
 from app.engine.risk import RiskEngine
@@ -98,6 +99,7 @@ def bullish_facts(rising_frame: pd.DataFrame) -> Facts:
         BreadthEngine().analyze({"TEST.NS": rising_frame}).model_copy(update={"confidence": 1})
     )
     cpr_profile = CPREngine().analyze("TEST.NS", rising_frame)
+    avwap_profile = AVWAPEngine().analyze("TEST.NS", rising_frame)
     risk_setup_facts = setup_profile.facts.model_copy(
         update={
             "pivot_price": 100,
@@ -128,6 +130,8 @@ def bullish_facts(rising_frame: pd.DataFrame) -> Facts:
         breadth_profile=breadth_profile,
         cpr_score=cpr_profile.score,
         cpr_profile=cpr_profile,
+        avwap_score=avwap_profile.score,
+        avwap_profile=avwap_profile,
         sector_name="Defence",
         sector_rank=1,
         sector_percentile=99,
@@ -196,6 +200,7 @@ def feature_names() -> Iterator[str]:
         "market",
         "breadth",
         "cpr",
+        "avwap",
         "sector",
         "stock",
         "setup",

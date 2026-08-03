@@ -3,6 +3,7 @@
 from collections.abc import Mapping
 
 from app.core.config import DEFAULT_DECISION_WEIGHTS, DecisionWeights
+from app.models.avwap import AVWAPProfile, AVWAPState
 from app.models.breadth import BreadthProfile, BreadthState
 from app.models.cpr import CPRProfile
 from app.models.decision import (
@@ -41,6 +42,7 @@ class DecisionEngine:
         risk: RiskProfile | None,
         breadth: BreadthProfile | None = None,
         cpr: CPRProfile | None = None,
+        avwap: AVWAPProfile | None = None,
     ) -> DecisionProfile:
         """Return one decision without recalculating subordinate intelligence."""
         regime = market.state if market else MarketRegime.RANGE
@@ -69,7 +71,7 @@ class DecisionEngine:
         decision_score = sum(item.contribution for item in breakdown.values())
         confidence = sum(item.confidence * item.weight for item in breakdown.values())
         action = self._action(
-            decision_score, confidence, regime, sector, stock, setup, risk, breadth, cpr
+            decision_score, confidence, regime, sector, stock, setup, risk, breadth, cpr, avwap
         )
         reasons, warnings = self._explain(
             market,
@@ -80,6 +82,7 @@ class DecisionEngine:
             risk,
             breadth,
             cpr,
+            avwap,
             observations,
         )
         return DecisionProfile(
@@ -120,6 +123,7 @@ class DecisionEngine:
         risk: RiskProfile | None,
         breadth: BreadthProfile | None,
         cpr: CPRProfile | None,
+        avwap: AVWAPProfile | None,
     ) -> DecisionAction:
         """Apply transparent action gates after adaptive score calculation."""
         hostile_market = regime in {
@@ -137,6 +141,7 @@ class DecisionEngine:
             or breadth.breadth_state in {BreadthState.DISTRIBUTION, BreadthState.CAPITULATION}
         )
         poor_cpr = cpr is not None and cpr.score < 25 and cpr.range_probability >= 75
+        poor_avwap = avwap is not None and avwap.state == AVWAPState.STRONG_RESISTANCE
         if (
             hostile_market
             or weak_sector
@@ -144,6 +149,7 @@ class DecisionEngine:
             or poor_risk
             or poor_breadth
             or poor_cpr
+            or poor_avwap
             or score < 50
         ):
             return DecisionAction.AVOID
@@ -189,6 +195,7 @@ class DecisionEngine:
         risk: RiskProfile | None,
         breadth: BreadthProfile | None,
         cpr: CPRProfile | None,
+        avwap: AVWAPProfile | None,
         observations: Mapping[str, tuple[float, float]],
     ) -> tuple[tuple[str, ...], tuple[str, ...]]:
         """Generate concise reasons and warnings from existing profile evidence."""
@@ -205,6 +212,9 @@ class DecisionEngine:
                 f"{cpr.breakout_probability:.0f}% breakout probability"
             )
             warnings.extend(cpr.warnings)
+        if avwap:
+            reasons.append(f"{avwap.state.value} at anchored institutional cost basis")
+            warnings.extend(avwap.warnings)
         if sector:
             reasons.append(f"{sector.rotation.value} {sector.facts.name} sector")
         if relative_strength:
