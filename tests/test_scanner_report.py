@@ -9,9 +9,11 @@ from app.core.constants import FEATURE_WEIGHTS
 from app.data.loader import DataLoader
 from app.engine.registry import FeatureRegistry
 from app.engine.scorer import Scorer
+from app.features.breadth import BreadthFeature
 from app.features.market import MarketFeature
 from app.features.momentum import MomentumFeature
 from app.features.relative_strength import RelativeStrengthFeature
+from app.features.risk import RiskFeature
 from app.features.sector import SectorFeature
 from app.features.setup import SetupFeature
 from app.features.stock import StockFeature
@@ -46,9 +48,11 @@ def build_test_scanner(frame: pd.DataFrame) -> Scanner:
     registry = FeatureRegistry(
         [
             MarketFeature(),
+            BreadthFeature(),
             SectorFeature(),
             StockFeature(),
             SetupFeature(),
+            RiskFeature(),
             TrendFeature(),
             RelativeStrengthFeature(),
             MomentumFeature(),
@@ -73,18 +77,37 @@ def test_scanner_ranks_results_and_report_contains_expected_columns(
     sheet = workbook["Momentum Scanner"]
     headers = [cell.value for cell in sheet[1]]
     assert headers[:3] == ["Rank", "Symbol", "Score"]
-    assert headers[:17] == [
+    assert headers[:36] == [
         "Rank",
         "Symbol",
         "Score",
+        "Decision Score",
+        "Action",
+        "Trade Grade",
+        "Decision Confidence",
+        "Decision Reasons",
         "Stock Grade",
         "Stock Score",
+        "Breadth Grade",
+        "Breadth Score",
+        "Breadth State",
+        "Breadth Confidence",
+        "Volume Grade",
+        "Volume Score",
+        "Volume State",
+        "Volume Confidence",
+        "Volume Reasons",
         "Setup Type",
         "Setup Grade",
         "Setup Score",
         "Pivot Price",
         "Invalidation Price",
         "Breakout Distance %",
+        "Risk Grade",
+        "Risk Score",
+        "Entry Price",
+        "Stop Price",
+        "Available R",
         "RS",
         "Percentile",
         "Sector",

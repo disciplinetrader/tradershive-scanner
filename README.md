@@ -23,6 +23,12 @@ Intrinsic trend, momentum, participation, health, and grading are documented in
 [`docs/stock-intelligence-engine.md`](docs/stock-intelligence-engine.md).
 Objective price-volume setup detection and scoring are documented in
 [`docs/setup-intelligence-engine.md`](docs/setup-intelligence-engine.md).
+Structural downside, reward-to-risk, and position sizing are documented in
+[`docs/risk-intelligence-engine.md`](docs/risk-intelligence-engine.md).
+Adaptive profile aggregation, actions, and explanations are documented in
+[`docs/decision-intelligence-engine.md`](docs/decision-intelligence-engine.md).
+Scan-level posture, aggression, sector leadership, and operating guidance are documented in
+[`docs/situational-awareness-engine.md`](docs/situational-awareness-engine.md).
 
 ## Setup
 
@@ -70,3 +76,9 @@ python scripts/benchmark_data_engine.py
 
 Scanner scores are screening signals, not investment advice. Yahoo Finance availability and data
 quality should be monitored before operational or commercial use.
+
+Volume behavior and institutional participation methodology are documented in
+[Volume Intelligence Engine](docs/volume-intelligence-engine.md).
+
+Cross-sectional participation and market confirmation are documented in the
+[Breadth Intelligence Engine](docs/breadth-intelligence-engine.md).

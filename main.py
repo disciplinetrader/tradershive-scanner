@@ -16,11 +16,14 @@ from app.data.loader import DataLoader
 from app.data.sectors import load_sector_assignments
 from app.engine.registry import FeatureRegistry
 from app.engine.scorer import Scorer
+from app.features.breadth import BreadthFeature
 from app.features.market import MarketFeature
 from app.features.momentum import MomentumFeature
 from app.features.relative_strength import RelativeStrengthFeature
+from app.features.risk import RiskFeature
 from app.features.sector import SectorFeature
 from app.features.setup import SetupFeature
+from app.features.situation import SituationFeature
 from app.features.stock import StockFeature
 from app.features.trend import TrendFeature
 from app.features.volatility import VolatilityFeature
@@ -52,9 +55,11 @@ def build_scorer() -> Scorer:
     registry = FeatureRegistry(
         [
             MarketFeature(),
+            BreadthFeature(),
             SectorFeature(),
             StockFeature(),
             SetupFeature(),
+            RiskFeature(),
             TrendFeature(),
             RelativeStrengthFeature(),
             MomentumFeature(),
@@ -119,12 +124,30 @@ def cli(arguments: Sequence[str] | None = None) -> int:
     parsed = parser.parse_args(arguments)
     sector_assignments = load_sector_assignments(parsed.sector_map) if parsed.sector_map else None
     results = build_scanner().scan(parsed.symbols, sector_assignments)
-    for result in results:
+    if results and results[0].situation_profile:
+        situation = results[0].situation_profile
+        print("Situation Summary")
+        for line in SituationFeature().summarize(situation):
+            print(f"  {line}")
+        print(f"  Strategy: {' | '.join(situation.recommended_strategy)}")
+        print()
+    print("Top 20")
+    for result in results[:20]:
+        decision = result.decision_profile
         print(
-            f"{result.rank:>3} {result.symbol:<20} {result.final_score:>6.2f} "
+            f"{result.rank:>3} {result.symbol:<20} {result.decision_score:>6.2f} "
+            f"Decision {decision.action.value if decision else 'N/A':<9} "
+            f"TradeGrade {decision.grade.value if decision else 'N/A':<6} "
+            f"Confidence {(decision.confidence if decision else 0):>5.0%} "
+            f"Breadth {result.facts.breadth_grade.value:<2} "
+            f"BreadthState {result.facts.breadth_profile.breadth_state.value:<22} "
             f"Grade {result.facts.stock_grade.value:<2} "
             f"Setup {result.facts.setup_type.value:<16} "
             f"SetupGrade {result.facts.setup_grade.value:<2} "
+            f"Risk {result.facts.risk_grade.value:<6} "
+            f"Volume {result.facts.volume_grade.value:<2} "
+            f"VolState {result.facts.volume_profile.volume_state.value:<29} "
+            f"R {result.facts.available_r_multiple or 0:>5.2f} "
             f"RS {result.features['relative_strength'].score:>6.2f} "
             f"Pctl {result.facts.relative_strength_percentile:>6.2f}"
         )

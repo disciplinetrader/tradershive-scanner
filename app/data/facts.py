@@ -6,12 +6,14 @@ import pandas as pd
 
 from app.core.constants import RELATIVE_STRENGTH_HORIZONS
 from app.data.benchmark import BenchmarkSnapshot
+from app.models.breadth import BreadthProfile
 from app.models.facts import Facts
 from app.models.market import MarketProfile, MarketRegime
 from app.models.relative_strength import RelativeStrengthHorizon, RelativeStrengthProfile
 from app.models.sector import SectorProfile, SectorRotation
 from app.models.setup import SetupProfile
 from app.models.stock import StockProfile
+from app.models.volume import VolumeProfile
 
 
 def build_facts(
@@ -23,6 +25,8 @@ def build_facts(
     sector_name: str = "Unclassified",
     stock_profile: StockProfile | None = None,
     setup_profile: SetupProfile | None = None,
+    volume_profile: VolumeProfile | None = None,
+    breadth_profile: BreadthProfile | None = None,
 ) -> Facts:
     """Build immutable facts from the latest complete indicator row."""
     required = {
@@ -96,6 +100,14 @@ def build_facts(
         from app.engine.setup import SetupEngine
 
         setup_profile = SetupEngine().analyze(symbol, frame, stock_profile)
+    if volume_profile is None:
+        from app.engine.volume import VolumeEngine
+
+        volume_profile = VolumeEngine().analyze(symbol, frame)
+    if breadth_profile is None:
+        from app.engine.breadth import BreadthEngine
+
+        breadth_profile = BreadthEngine().analyze({symbol: frame})
     return Facts(
         symbol=symbol.upper(),
         close=close,
@@ -112,6 +124,9 @@ def build_facts(
         market_confidence=market_confidence,
         market_state=market_state,
         market_reasons=market_reasons,
+        breadth_score=breadth_profile.score,
+        breadth_grade=breadth_profile.grade,
+        breadth_profile=breadth_profile,
         sector_name=resolved_sector_name,
         sector_rank=sector_profile.rank if sector_profile else 0,
         sector_percentile=sector_profile.percentile if sector_profile else 0,
@@ -126,6 +141,9 @@ def build_facts(
         stock_score=stock_profile.score,
         stock_grade=stock_profile.grade,
         stock_profile=stock_profile,
+        volume_score=volume_profile.score,
+        volume_grade=volume_profile.grade,
+        volume_profile=volume_profile,
         setup_score=setup_profile.score,
         setup_grade=setup_profile.grade,
         setup_type=setup_profile.best_setup_type,

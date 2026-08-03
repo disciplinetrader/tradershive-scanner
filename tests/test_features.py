@@ -1,8 +1,10 @@
 """Unit tests for every built-in scoring module."""
 
+from app.features.breadth import BreadthFeature
 from app.features.market import MarketFeature
 from app.features.momentum import MomentumFeature
 from app.features.relative_strength import RelativeStrengthFeature
+from app.features.risk import RiskFeature
 from app.features.sector import SectorFeature
 from app.features.setup import SetupFeature
 from app.features.stock import StockFeature
@@ -17,9 +19,11 @@ def test_all_bullish_features_return_valid_explainable_scores(bullish_facts: Fac
     """Every feature should emit normalized scores, confidence, and reasons."""
     features = [
         MarketFeature(),
+        BreadthFeature(),
         SectorFeature(),
         StockFeature(),
         SetupFeature(),
+        RiskFeature(),
         TrendFeature(),
         RelativeStrengthFeature(),
         MomentumFeature(),
@@ -37,9 +41,11 @@ def test_all_bullish_features_return_valid_explainable_scores(bullish_facts: Fac
 def test_bullish_facts_score_highly(bullish_facts: Facts) -> None:
     """Strong trend, momentum, participation, and regime should score well."""
     assert MarketFeature().evaluate(bullish_facts).score == 100
+    assert BreadthFeature().evaluate(bullish_facts).score == bullish_facts.breadth_score
     assert SectorFeature().evaluate(bullish_facts).score == 95
     assert StockFeature().evaluate(bullish_facts).score == 94
     assert SetupFeature().evaluate(bullish_facts).score == bullish_facts.setup_score
+    assert RiskFeature().evaluate(bullish_facts).score == bullish_facts.risk_score
     assert TrendFeature().evaluate(bullish_facts).score == 100
     assert RelativeStrengthFeature().evaluate(bullish_facts).score >= 80
     assert MomentumFeature().evaluate(bullish_facts).score >= 90
@@ -47,7 +53,7 @@ def test_bullish_facts_score_highly(bullish_facts: Facts) -> None:
 
 
 def test_bearish_changes_reduce_scores(bullish_facts: Facts) -> None:
-    """Adverse regime and price action should not receive bullish scores."""
+    """Adverse inputs lower dependent scores without recalculating stored profiles."""
     bearish = bullish_facts.model_copy(
         update={
             "close": 70,
@@ -76,7 +82,7 @@ def test_bearish_changes_reduce_scores(bullish_facts: Facts) -> None:
     assert TrendFeature().evaluate(bearish).score == 0
     assert RelativeStrengthFeature().evaluate(bearish).score < 50
     assert MomentumFeature().evaluate(bearish).score < 50
-    assert VolumeFeature().evaluate(bearish).score < VolumeFeature().evaluate(bullish_facts).score
+    assert VolumeFeature().evaluate(bearish) == VolumeFeature().evaluate(bullish_facts)
 
 
 def test_extreme_volatility_is_penalized(bullish_facts: Facts) -> None:

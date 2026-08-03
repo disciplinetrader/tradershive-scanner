@@ -5,9 +5,108 @@ from os import getenv
 from pathlib import Path
 
 from dotenv import load_dotenv
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+from app.models.market import MarketRegime
 
 load_dotenv()
+
+
+class DecisionWeights(BaseModel):
+    """Tunable decision weights for one market regime."""
+
+    model_config = ConfigDict(frozen=True)
+
+    market: float = Field(gt=0, lt=1)
+    breadth: float = Field(gt=0, lt=1)
+    sector: float = Field(gt=0, lt=1)
+    relative_strength: float = Field(gt=0, lt=1)
+    stock: float = Field(gt=0, lt=1)
+    setup: float = Field(gt=0, lt=1)
+    risk: float = Field(gt=0, lt=1)
+
+    @model_validator(mode="after")
+    def validate_total(self) -> "DecisionWeights":
+        """Require normalized weights so decision scores remain comparable."""
+        if abs(sum(self.model_dump().values()) - 1.0) > 1e-9:
+            raise ValueError("Decision weights must sum to 1.0")
+        return self
+
+
+DEFAULT_DECISION_WEIGHTS: dict[MarketRegime, DecisionWeights] = {
+    MarketRegime.HEALTHY_BULL: DecisionWeights(
+        market=0.15,
+        breadth=0.10,
+        sector=0.18,
+        relative_strength=0.18,
+        stock=0.17,
+        setup=0.13,
+        risk=0.09,
+    ),
+    MarketRegime.BULL: DecisionWeights(
+        market=0.18,
+        breadth=0.10,
+        sector=0.16,
+        relative_strength=0.16,
+        stock=0.17,
+        setup=0.14,
+        risk=0.09,
+    ),
+    MarketRegime.WEAK_BULL: DecisionWeights(
+        market=0.22,
+        breadth=0.12,
+        sector=0.15,
+        relative_strength=0.14,
+        stock=0.14,
+        setup=0.13,
+        risk=0.10,
+    ),
+    MarketRegime.RANGE: DecisionWeights(
+        market=0.25,
+        breadth=0.15,
+        sector=0.17,
+        relative_strength=0.08,
+        stock=0.08,
+        setup=0.15,
+        risk=0.12,
+    ),
+    MarketRegime.WEAK_BEAR: DecisionWeights(
+        market=0.28,
+        breadth=0.15,
+        sector=0.20,
+        relative_strength=0.08,
+        stock=0.08,
+        setup=0.09,
+        risk=0.12,
+    ),
+    MarketRegime.BEAR: DecisionWeights(
+        market=0.30,
+        breadth=0.15,
+        sector=0.20,
+        relative_strength=0.08,
+        stock=0.08,
+        setup=0.08,
+        risk=0.11,
+    ),
+    MarketRegime.CAPITULATION: DecisionWeights(
+        market=0.35,
+        breadth=0.18,
+        sector=0.20,
+        relative_strength=0.06,
+        stock=0.06,
+        setup=0.06,
+        risk=0.09,
+    ),
+    MarketRegime.RECOVERY: DecisionWeights(
+        market=0.22,
+        breadth=0.13,
+        sector=0.16,
+        relative_strength=0.16,
+        stock=0.14,
+        setup=0.11,
+        risk=0.08,
+    ),
+}
 
 
 class Settings(BaseModel):

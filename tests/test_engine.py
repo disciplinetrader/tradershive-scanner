@@ -5,9 +5,11 @@ import pytest
 from app.core.constants import FEATURE_WEIGHTS
 from app.engine.registry import FeatureRegistry
 from app.engine.scorer import Scorer
+from app.features.breadth import BreadthFeature
 from app.features.market import MarketFeature
 from app.features.momentum import MomentumFeature
 from app.features.relative_strength import RelativeStrengthFeature
+from app.features.risk import RiskFeature
 from app.features.sector import SectorFeature
 from app.features.setup import SetupFeature
 from app.features.stock import StockFeature
@@ -22,9 +24,11 @@ def production_registry() -> FeatureRegistry:
     return FeatureRegistry(
         [
             MarketFeature(),
+            BreadthFeature(),
             SectorFeature(),
             StockFeature(),
             SetupFeature(),
+            RiskFeature(),
             TrendFeature(),
             RelativeStrengthFeature(),
             MomentumFeature(),

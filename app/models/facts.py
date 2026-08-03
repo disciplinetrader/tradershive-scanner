@@ -2,11 +2,14 @@
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.models.breadth import BreadthProfile
 from app.models.market import MarketRegime
 from app.models.relative_strength import RelativeStrengthProfile
+from app.models.risk import RiskGrade, RiskProfile
 from app.models.sector import SectorRotation
 from app.models.setup import SetupProfile, SetupType
 from app.models.stock import StockGrade, StockProfile
+from app.models.volume import VolumeProfile
 
 
 class Facts(BaseModel):
@@ -29,6 +32,9 @@ class Facts(BaseModel):
     market_confidence: float = Field(ge=0, le=1)
     market_state: MarketRegime
     market_reasons: tuple[str, ...] = Field(min_length=1)
+    breadth_score: float = Field(ge=0, le=100)
+    breadth_grade: StockGrade
+    breadth_profile: BreadthProfile
     sector_name: str = Field(min_length=1)
     sector_rank: int = Field(ge=0)
     sector_percentile: float = Field(ge=0, le=99)
@@ -39,13 +45,22 @@ class Facts(BaseModel):
     stock_score: float = Field(ge=0, le=100)
     stock_grade: StockGrade
     stock_profile: StockProfile
+    volume_score: float = Field(ge=0, le=100)
+    volume_grade: StockGrade
+    volume_profile: VolumeProfile
     setup_score: float = Field(ge=0, le=100)
     setup_grade: StockGrade
     setup_type: SetupType
     setup_profile: SetupProfile
-    pivot_price: float = Field(gt=0)
-    invalidation_price: float = Field(gt=0)
+    pivot_price: float | None = Field(default=None, gt=0)
+    invalidation_price: float | None = Field(default=None, gt=0)
     breakout_distance_percent: float = Field(ge=0)
+    risk_score: float = Field(default=0, ge=0, le=100)
+    risk_grade: RiskGrade = RiskGrade.REJECT
+    entry_price: float | None = Field(default=None, gt=0)
+    stop_price: float | None = Field(default=None, gt=0)
+    available_r_multiple: float | None = Field(default=None, ge=0)
+    risk_profile: RiskProfile | None = None
     ema_alignment: bool
     near_52_week_high: bool
     distance_from_high: float = Field(ge=0)

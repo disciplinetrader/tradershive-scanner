@@ -6,7 +6,10 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from app.engine.breadth import BreadthEngine
+from app.engine.risk import RiskEngine
 from app.engine.setup import SetupEngine
+from app.engine.volume import VolumeEngine
 from app.models.facts import Facts
 from app.models.market import MarketRegime
 from app.models.relative_strength import RelativeStrengthHorizon, RelativeStrengthProfile
@@ -89,14 +92,27 @@ def bullish_facts(rising_frame: pd.DataFrame) -> Facts:
         facts=stock_facts,
     )
     setup_profile = SetupEngine().analyze("TEST.NS", rising_frame, stock_profile)
-    return Facts(
+    volume_profile = VolumeEngine().analyze("TEST.NS", rising_frame)
+    breadth_profile = (
+        BreadthEngine().analyze({"TEST.NS": rising_frame}).model_copy(update={"confidence": 1})
+    )
+    risk_setup_facts = setup_profile.facts.model_copy(
+        update={
+            "pivot_price": 100,
+            "invalidation_price": 95,
+            "base_high": 100,
+            "base_low": 75,
+        }
+    )
+    setup_profile = setup_profile.model_copy(update={"facts": risk_setup_facts})
+    facts = Facts(
         symbol="TEST.NS",
         close=100,
         ema20=95,
         ema50=90,
         ema200=80,
         atr14=3,
-        high_52_week=105,
+        high_52_week=130,
         low_52_week=55,
         average_volume=1_000_000,
         volume_ratio=2,
@@ -105,6 +121,9 @@ def bullish_facts(rising_frame: pd.DataFrame) -> Facts:
         market_confidence=1,
         market_state=MarketRegime.HEALTHY_BULL,
         market_reasons=("Strong breadth", "Low VIX", "Indexes above EMA200"),
+        breadth_score=breadth_profile.score,
+        breadth_grade=breadth_profile.grade,
+        breadth_profile=breadth_profile,
         sector_name="Defence",
         sector_rank=1,
         sector_percentile=99,
@@ -115,6 +134,9 @@ def bullish_facts(rising_frame: pd.DataFrame) -> Facts:
         stock_score=stock_profile.score,
         stock_grade=stock_profile.grade,
         stock_profile=stock_profile,
+        volume_score=volume_profile.score,
+        volume_grade=volume_profile.grade,
+        volume_profile=volume_profile,
         setup_score=setup_profile.score,
         setup_grade=setup_profile.grade,
         setup_type=setup_profile.best_setup_type,
@@ -150,6 +172,17 @@ def bullish_facts(rising_frame: pd.DataFrame) -> Facts:
         annualized_volatility=0.30,
         history_days=320,
     )
+    risk_profile = RiskEngine().analyze(facts, account_size=1_000_000)
+    return facts.model_copy(
+        update={
+            "risk_score": risk_profile.score,
+            "risk_grade": risk_profile.grade,
+            "entry_price": risk_profile.facts.entry_price,
+            "stop_price": risk_profile.facts.stop_price,
+            "available_r_multiple": risk_profile.facts.available_r_multiple,
+            "risk_profile": risk_profile,
+        }
+    )
 
 
 @pytest.fixture
@@ -157,9 +190,11 @@ def feature_names() -> Iterator[str]:
     """Yield canonical feature names for aggregation assertions."""
     yield from (
         "market",
+        "breadth",
         "sector",
         "stock",
         "setup",
+        "risk",
         "trend",
         "relative_strength",
         "momentum",

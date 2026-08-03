@@ -41,8 +41,8 @@ class SetupFacts(BaseModel):
     setup_type: SetupType
     setup_score: float = Field(ge=0, le=100)
     setup_confidence: float = Field(ge=0, le=1)
-    pivot_price: float = Field(gt=0)
-    invalidation_price: float = Field(gt=0)
+    pivot_price: float | None = Field(default=None, gt=0)
+    invalidation_price: float | None = Field(default=None, gt=0)
     base_high: float = Field(gt=0)
     base_low: float = Field(gt=0)
     base_depth_percent: float = Field(ge=0)

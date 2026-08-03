@@ -23,14 +23,33 @@ def generate_excel_report(results: Sequence[StockResult], destination: Path) -> 
         "Rank",
         "Symbol",
         "Score",
+        "Decision Score",
+        "Action",
+        "Trade Grade",
+        "Decision Confidence",
+        "Decision Reasons",
         "Stock Grade",
         "Stock Score",
+        "Breadth Grade",
+        "Breadth Score",
+        "Breadth State",
+        "Breadth Confidence",
+        "Volume Grade",
+        "Volume Score",
+        "Volume State",
+        "Volume Confidence",
+        "Volume Reasons",
         "Setup Type",
         "Setup Grade",
         "Setup Score",
         "Pivot Price",
         "Invalidation Price",
         "Breakout Distance %",
+        "Risk Grade",
+        "Risk Score",
+        "Entry Price",
+        "Stop Price",
+        "Available R",
         "RS",
         "Percentile",
         "Sector",
@@ -54,14 +73,37 @@ def generate_excel_report(results: Sequence[StockResult], destination: Path) -> 
             result.rank,
             result.symbol,
             result.final_score,
+            result.decision_score,
+            result.decision_profile.action.value if result.decision_profile else "",
+            result.decision_profile.grade.value if result.decision_profile else "",
+            result.decision_profile.confidence if result.decision_profile else 0,
+            " | ".join(result.decision_profile.reasons) if result.decision_profile else "",
             result.facts.stock_grade.value,
             result.facts.stock_score,
+            result.facts.breadth_grade.value,
+            result.facts.breadth_score,
+            result.facts.breadth_profile.breadth_state.value,
+            result.facts.breadth_profile.confidence,
+            result.facts.volume_grade.value,
+            result.facts.volume_score,
+            result.facts.volume_profile.volume_state.value,
+            result.facts.volume_profile.confidence,
+            " | ".join(result.facts.volume_profile.reasons),
             result.facts.setup_type.value,
             result.facts.setup_grade.value,
             result.facts.setup_score,
             result.facts.pivot_price,
             result.facts.invalidation_price,
             result.facts.breakout_distance_percent,
+            result.facts.risk_grade.value,
+            result.facts.risk_score,
+            result.facts.entry_price or "",
+            result.facts.stop_price or "",
+            (
+                result.facts.available_r_multiple
+                if result.facts.available_r_multiple is not None
+                else ""
+            ),
             result.features["relative_strength"].score,
             result.facts.relative_strength_percentile,
             result.facts.sector_name,
@@ -96,9 +138,55 @@ def generate_excel_report(results: Sequence[StockResult], destination: Path) -> 
     for index, header in enumerate(headers, 1):
         width = 80 if header == "Reasons" else max(12, min(24, len(header) + 2))
         sheet.column_dimensions[get_column_letter(index)].width = width
-    for row in sheet.iter_rows(min_row=2, min_col=3, max_col=22):
+    for row in sheet.iter_rows(min_row=2, min_col=3, max_col=len(headers)):
         for cell in row:
             cell.number_format = "0.00"
+    situation = results[0].situation_profile
+    if situation:
+        summary = workbook.create_sheet("Situation Summary", 0)
+        summary.append(["Situation Summary", "Value"])
+        summary_rows = (
+            ("Market Regime", situation.market_regime.value),
+            (
+                "Breadth State",
+                (
+                    situation.breadth_profile.breadth_state.value
+                    if situation.breadth_profile
+                    else "Unavailable"
+                ),
+            ),
+            (
+                "Breadth Score",
+                situation.breadth_profile.score if situation.breadth_profile else 0,
+            ),
+            ("Trading Bias", situation.trading_bias.value),
+            ("Aggression", situation.aggression.value),
+            ("Market Health", situation.market_health),
+            ("Risk Environment", situation.risk_environment.value),
+            ("Money Flow", situation.money_flow.value),
+            ("Position Sizing", situation.position_sizing_guidance.value),
+            ("Maximum Open Positions", situation.recommended_maximum_open_positions),
+            ("Maximum Risk Per Trade %", situation.maximum_risk_per_trade),
+            ("Expected Holding Period", situation.expected_holding_period),
+            (
+                "Recommended Setups",
+                ", ".join(item.value for item in situation.recommended_setup_types),
+            ),
+            ("Top 5 Sectors", ", ".join(situation.sector_leadership.top_sectors)),
+            ("Bottom 5 Sectors", ", ".join(situation.sector_leadership.bottom_sectors)),
+            ("Improving Sectors", ", ".join(situation.sector_leadership.improving_sectors)),
+            ("Weakening Sectors", ", ".join(situation.sector_leadership.weakening_sectors)),
+            ("Reasons", " | ".join(situation.reasons)),
+            ("Recommended Strategy", " | ".join(situation.recommended_strategy)),
+            ("Warnings", " | ".join(situation.warnings)),
+        )
+        for row in summary_rows:
+            summary.append(row)
+        for cell in summary[1]:
+            cell.font = Font(color="FFFFFF", bold=True)
+            cell.fill = header_fill
+        summary.column_dimensions["A"].width = 30
+        summary.column_dimensions["B"].width = 100
     workbook.save(temporary)
     temporary.replace(destination)
     return destination
