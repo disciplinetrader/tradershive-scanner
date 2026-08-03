@@ -47,3 +47,11 @@ class DecisionProfile(BaseModel):
     reasons: tuple[str, ...] = Field(min_length=1)
     warnings: tuple[str, ...]
     weight_breakdown: dict[str, WeightedDecisionComponent] = Field(min_length=8, max_length=8)
+    context_score: float = Field(default=0, ge=0, le=100)
+    leadership_score: float = Field(default=0, ge=0, le=100)
+    institutional_score: float = Field(default=0, ge=0, le=100)
+    timing_score: float = Field(default=0, ge=0, le=100)
+    setup_score: float = Field(default=0, ge=0, le=100)
+    risk_score: float = Field(default=0, ge=0, le=100)
+    decision_confidence: float = Field(default=0, ge=0, le=1)
+    scanner_profile: str = "Momentum Breakout"

@@ -18,6 +18,16 @@ class MarketRegime(StrEnum):
     RECOVERY = "Recovery"
 
 
+class RiskOnState(StrEnum):
+    """Cross-asset market risk posture."""
+
+    STRONG_RISK_ON = "Strong Risk-On"
+    RISK_ON = "Risk-On"
+    NEUTRAL = "Neutral"
+    RISK_OFF = "Risk-Off"
+    STRONG_RISK_OFF = "Strong Risk-Off"
+
+
 class MarketFacts(BaseModel):
     """Point-in-time technical quality facts for one market benchmark."""
 
@@ -82,3 +92,23 @@ class MarketProfile(BaseModel):
     indexes: dict[str, MarketFacts]
     breadth: MarketBreadth
     volatility: MarketVolatility
+    rally_attempt: bool = False
+    rally_attempt_day: int = 0
+    follow_through_day: bool = False
+    failed_follow_through: bool = False
+    active_distribution_days: int = 0
+    aged_out_distribution_days: int = 0
+    distribution_pressure: float = Field(default=0, ge=0, le=100)
+    market_pressure_score: float = Field(default=0, ge=0, le=100)
+    risk_on_state: RiskOnState = RiskOnState.NEUTRAL
+    leadership_expansion: bool = False
+    leadership_contraction: bool = False
+    breakout_attempts: int = 0
+    breakout_success_rate: float = 0
+    failed_breakout_rate: float = 0
+    average_post_breakout_return: float = 0
+    average_breakout_mfe: float = 0
+    average_breakout_mae: float = 0
+    opportunity_count: dict[str, int] = Field(default_factory=dict)
+    regime_transition: str = "Stable"
+    index_divergence: tuple[str, ...] = ()

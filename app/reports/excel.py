@@ -71,6 +71,15 @@ def generate_excel_report(results: Sequence[StockResult], destination: Path) -> 
         "AVWAP Score",
         "AVWAP State",
         "AVWAP Alignment %",
+        "Industry Group",
+        "Industry Rank",
+        "Industry Percentile",
+        "Industry Rotation",
+        "Advanced Setup Score",
+        "Failure Risk Score",
+        "Volume Signature",
+        "Pocket Pivot",
+        "Decision Profile",
         "Reasons",
     ]
 
@@ -135,6 +144,19 @@ def generate_excel_report(results: Sequence[StockResult], destination: Path) -> 
             result.facts.avwap_score,
             result.facts.avwap_profile.state.value,
             result.facts.avwap_profile.alignment_score,
+            result.facts.industry_group,
+            result.facts.industry_group_rank,
+            result.facts.industry_group_percentile,
+            result.facts.industry_group_rotation.value,
+            result.facts.setup_profile.advanced_setup_score,
+            result.facts.setup_profile.failure_risk_score,
+            result.facts.volume_profile.volume_signature.value,
+            str(result.facts.volume_profile.pocket_pivot),
+            (
+                result.decision_profile.scanner_profile
+                if result.decision_profile
+                else "Momentum Breakout"
+            ),
             " | ".join(result.reasons),
         ]
         sheet.append(row)

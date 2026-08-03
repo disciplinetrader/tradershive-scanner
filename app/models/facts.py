@@ -5,7 +5,8 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.models.avwap import AVWAPProfile
 from app.models.breadth import BreadthProfile
 from app.models.cpr import CPRProfile
-from app.models.market import MarketRegime
+from app.models.industry import IndustryGroupProfile, IndustryRotation
+from app.models.market import MarketRegime, RiskOnState
 from app.models.relative_strength import RelativeStrengthProfile
 from app.models.risk import RiskGrade, RiskProfile
 from app.models.sector import SectorRotation
@@ -34,6 +35,9 @@ class Facts(BaseModel):
     market_confidence: float = Field(ge=0, le=1)
     market_state: MarketRegime
     market_reasons: tuple[str, ...] = Field(min_length=1)
+    market_pressure_score: float = Field(default=0, ge=0, le=100)
+    market_risk_on_state: RiskOnState = RiskOnState.NEUTRAL
+    market_follow_through_day: bool = False
     breadth_score: float = Field(ge=0, le=100)
     breadth_grade: StockGrade
     breadth_profile: BreadthProfile
@@ -48,6 +52,12 @@ class Facts(BaseModel):
     sector_confidence: float = Field(ge=0, le=1)
     sector_rotation: SectorRotation
     sector_reasons: tuple[str, ...] = Field(min_length=1)
+    industry_group: str = "Unclassified"
+    industry_group_rank: int = Field(default=0, ge=0)
+    industry_group_percentile: float = Field(default=0, ge=0, le=100)
+    industry_group_score: float = Field(default=50, ge=0, le=100)
+    industry_group_rotation: IndustryRotation = IndustryRotation.NEUTRAL
+    industry_group_profile: IndustryGroupProfile | None = None
     stock_score: float = Field(ge=0, le=100)
     stock_grade: StockGrade
     stock_profile: StockProfile

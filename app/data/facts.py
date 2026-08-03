@@ -10,7 +10,8 @@ from app.models.avwap import AVWAPProfile
 from app.models.breadth import BreadthProfile
 from app.models.cpr import CPRProfile
 from app.models.facts import Facts
-from app.models.market import MarketProfile, MarketRegime
+from app.models.industry import IndustryGroupProfile, IndustryRotation
+from app.models.market import MarketProfile, MarketRegime, RiskOnState
 from app.models.relative_strength import RelativeStrengthHorizon, RelativeStrengthProfile
 from app.models.sector import SectorProfile, SectorRotation
 from app.models.setup import SetupProfile
@@ -31,6 +32,7 @@ def build_facts(
     breadth_profile: BreadthProfile | None = None,
     cpr_profile: CPRProfile | None = None,
     avwap_profile: AVWAPProfile | None = None,
+    industry_profile: IndustryGroupProfile | None = None,
 ) -> Facts:
     """Build immutable facts from the latest complete indicator row."""
     required = {
@@ -136,6 +138,11 @@ def build_facts(
         market_confidence=market_confidence,
         market_state=market_state,
         market_reasons=market_reasons,
+        market_pressure_score=market_profile.market_pressure_score if market_profile else 0,
+        market_risk_on_state=(
+            market_profile.risk_on_state if market_profile else RiskOnState.NEUTRAL
+        ),
+        market_follow_through_day=market_profile.follow_through_day if market_profile else False,
         breadth_score=breadth_profile.score,
         breadth_grade=breadth_profile.grade,
         breadth_profile=breadth_profile,
@@ -154,6 +161,14 @@ def build_facts(
             if sector_profile
             else ("Sector classification unavailable for this symbol",)
         ),
+        industry_group=industry_profile.facts.name if industry_profile else "Unclassified",
+        industry_group_rank=industry_profile.rank if industry_profile else 0,
+        industry_group_percentile=industry_profile.percentile if industry_profile else 0,
+        industry_group_score=industry_profile.score if industry_profile else 50,
+        industry_group_rotation=(
+            industry_profile.rotation if industry_profile else IndustryRotation.NEUTRAL
+        ),
+        industry_group_profile=industry_profile,
         stock_score=stock_profile.score,
         stock_grade=stock_profile.grade,
         stock_profile=stock_profile,

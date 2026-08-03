@@ -3,6 +3,7 @@
 from collections.abc import Mapping
 
 from app.core.config import DEFAULT_DECISION_WEIGHTS, DecisionWeights
+from app.core.v11_config import DEFAULT_DECISION_GATES, DecisionGates, ScannerProfileConfig
 from app.models.avwap import AVWAPProfile, AVWAPState
 from app.models.breadth import BreadthProfile, BreadthState
 from app.models.cpr import CPRProfile
@@ -12,12 +13,19 @@ from app.models.decision import (
     DecisionProfile,
     WeightedDecisionComponent,
 )
+from app.models.industry import IndustryGroupProfile, IndustryRotation
 from app.models.market import MarketProfile, MarketRegime
 from app.models.relative_strength import RelativeStrengthProfile
 from app.models.risk import RiskGrade, RiskProfile
 from app.models.sector import SectorProfile, SectorRotation
 from app.models.setup import SetupProfile, SetupType
 from app.models.stock import StockProfile
+from app.models.volume import VolumeProfile, VolumeSignature
+
+
+def np_mean(values: list[float]) -> float:
+    """Return a dependency-free arithmetic mean for decision subscores."""
+    return sum(values) / len(values) if values else 0.0
 
 
 class DecisionEngine:
@@ -26,11 +34,13 @@ class DecisionEngine:
     def __init__(
         self,
         regime_weights: Mapping[MarketRegime, DecisionWeights] | None = None,
+        gates: DecisionGates = DEFAULT_DECISION_GATES,
     ) -> None:
         """Initialize with a complete, externally tunable regime configuration."""
         self._weights = dict(regime_weights or DEFAULT_DECISION_WEIGHTS)
         if set(self._weights) != set(MarketRegime):
             raise ValueError("Decision weights must cover every market regime")
+        self._gates = gates
 
     def evaluate(
         self,
@@ -43,6 +53,9 @@ class DecisionEngine:
         breadth: BreadthProfile | None = None,
         cpr: CPRProfile | None = None,
         avwap: AVWAPProfile | None = None,
+        industry: IndustryGroupProfile | None = None,
+        volume: VolumeProfile | None = None,
+        scanner_profile: ScannerProfileConfig | None = None,
     ) -> DecisionProfile:
         """Return one decision without recalculating subordinate intelligence."""
         regime = market.state if market else MarketRegime.RANGE
@@ -73,6 +86,83 @@ class DecisionEngine:
         action = self._action(
             decision_score, confidence, regime, sector, stock, setup, risk, breadth, cpr, avwap
         )
+        hard_warnings: list[str] = []
+        profile_config = scanner_profile or ScannerProfileConfig()
+        if market and market.market_pressure_score > self._gates.maximum_market_pressure:
+            action = DecisionAction.AVOID
+            hard_warnings.append("Hard gate: market pressure exceeds configured maximum")
+        if setup and setup.failure_risk_score > self._gates.maximum_failure_risk:
+            action = DecisionAction.AVOID
+            hard_warnings.append("Hard gate: failed-breakout risk is excessive")
+        if volume and volume.volume_signature == VolumeSignature.DISTRIBUTION:
+            action = DecisionAction.AVOID
+            hard_warnings.append("Hard gate: institutional distribution")
+        if (
+            industry
+            and industry.rotation == IndustryRotation.LAGGING
+            and sector
+            and sector.rotation == SectorRotation.LAGGING
+        ):
+            action = DecisionAction.AVOID
+            hard_warnings.append("Hard gate: sector and industry are both lagging")
+        if (
+            action == DecisionAction.BUY
+            and risk
+            and (risk.facts.available_r_multiple or 0) < self._gates.minimum_r
+        ):
+            action = DecisionAction.WATCHLIST
+            hard_warnings.append("BUY gate: insufficient available R")
+        if (
+            action == DecisionAction.BUY
+            and profile_config.eligible_setups
+            and setup
+            and setup.best_setup_type.value not in profile_config.eligible_setups
+        ):
+            action = DecisionAction.WATCHLIST
+            hard_warnings.append("BUY gate: setup is not eligible for selected scanner profile")
+        minimum_decision_score = max(
+            self._gates.minimum_buy_score, profile_config.minimum_decision_score
+        )
+        if action == DecisionAction.BUY and decision_score < minimum_decision_score:
+            action = DecisionAction.WATCHLIST
+            hard_warnings.append("BUY gate: decision score is below scanner-profile minimum")
+        if action == DecisionAction.BUY and confidence < self._gates.minimum_confidence:
+            action = DecisionAction.WATCHLIST
+            hard_warnings.append("BUY gate: confidence is below configured minimum")
+        rs_percentile = relative_strength.rs250.percentile if relative_strength else 0.0
+        minimum_rs = max(self._gates.minimum_rs, profile_config.minimum_rs)
+        if action == DecisionAction.BUY and rs_percentile < minimum_rs:
+            action = DecisionAction.WATCHLIST
+            hard_warnings.append("BUY gate: Relative Strength is below scanner-profile minimum")
+        if action == DecisionAction.BUY and regime not in profile_config.allowed_market_regimes:
+            action = DecisionAction.WATCHLIST
+            hard_warnings.append("BUY gate: market regime is ineligible for scanner profile")
+        if (
+            action == DecisionAction.BUY
+            and sector
+            and sector.percentile
+            < max(
+                profile_config.minimum_sector_percentile,
+                profile_config.minimum_leadership_percentile,
+            )
+        ):
+            action = DecisionAction.WATCHLIST
+            hard_warnings.append("BUY gate: sector leadership is below scanner-profile minimum")
+        if action == DecisionAction.BUY and industry:
+            if industry.confidence < 0.75:
+                action = DecisionAction.WATCHLIST
+                hard_warnings.append("BUY gate: industry leadership data is incomplete")
+            elif industry.percentile < max(
+                profile_config.minimum_industry_percentile,
+                profile_config.minimum_leadership_percentile,
+            ):
+                action = DecisionAction.WATCHLIST
+                hard_warnings.append(
+                    "BUY gate: industry leadership is below scanner-profile minimum"
+                )
+        if action == DecisionAction.BUY and risk and risk.score < profile_config.minimum_risk_score:
+            action = DecisionAction.WATCHLIST
+            hard_warnings.append("BUY gate: risk score is below scanner-profile minimum")
         reasons, warnings = self._explain(
             market,
             sector,
@@ -85,6 +175,14 @@ class DecisionEngine:
             avwap,
             observations,
         )
+        context_score = market.score if market else 0
+        leadership_score = np_mean(
+            [sector.score if sector else 0, industry.score if industry else 50]
+        )
+        institutional_score = np_mean(
+            [volume.score if volume else 50, avwap.score if avwap else 50]
+        )
+        timing_score = np_mean([setup.score if setup else 0, cpr.score if cpr else 50])
         return DecisionProfile(
             decision_score=round(decision_score, 2),
             confidence=round(confidence, 2),
@@ -95,8 +193,16 @@ class DecisionEngine:
             ),
             action=action,
             reasons=reasons,
-            warnings=warnings,
+            warnings=tuple(dict.fromkeys((*hard_warnings, *warnings))),
             weight_breakdown=breakdown,
+            context_score=round(context_score, 2),
+            leadership_score=round(leadership_score, 2),
+            institutional_score=round(institutional_score, 2),
+            timing_score=round(timing_score, 2),
+            setup_score=setup.score if setup else 0,
+            risk_score=risk.score if risk else 0,
+            decision_confidence=round(confidence, 2),
+            scanner_profile=profile_config.name.value,
         )
 
     @staticmethod

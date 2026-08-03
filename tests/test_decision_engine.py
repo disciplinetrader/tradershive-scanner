@@ -1,6 +1,7 @@
 """Deterministic unit and integration tests for Decision Intelligence."""
 
 from app.core.config import DEFAULT_DECISION_WEIGHTS
+from app.core.v11_config import ScannerProfileConfig, ScannerProfileName
 from app.engine.decision import DecisionEngine
 from app.models.decision import DecisionAction, DecisionGrade
 from app.models.facts import Facts
@@ -165,3 +166,32 @@ def test_scanner_attaches_decision_and_ranks_by_decision_score(rising_frame) -> 
     assert all(result.decision_profile is not None for result in results)
     assert results[0].decision_score >= results[1].decision_score
     assert [result.rank for result in results] == [1, 2]
+
+
+def test_scanner_profile_gates_change_buy_eligibility(bullish_facts: Facts) -> None:
+    """The same weighted candidate receives different actions under distinct policies."""
+    engine = DecisionEngine()
+    inputs = (
+        _market(MarketRegime.HEALTHY_BULL, 100),
+        _sector(),
+        bullish_facts.rs_profile,
+        bullish_facts.stock_profile,
+        bullish_facts.setup_profile,
+        bullish_facts.risk_profile,
+        bullish_facts.breadth_profile,
+        bullish_facts.cpr_profile,
+        bullish_facts.avwap_profile,
+        None,
+        bullish_facts.volume_profile,
+    )
+    default = engine.evaluate(
+        *inputs,
+        ScannerProfileConfig(name=ScannerProfileName.MOMENTUM_BREAKOUT),
+    )
+    ipo = engine.evaluate(
+        *inputs,
+        ScannerProfileConfig(name=ScannerProfileName.IPO_LEADER),
+    )
+    assert default.action == DecisionAction.BUY
+    assert ipo.action == DecisionAction.WATCHLIST
+    assert any("not eligible" in warning for warning in ipo.warnings)

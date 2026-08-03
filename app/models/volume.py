@@ -18,6 +18,19 @@ class VolumeState(StrEnum):
     CLIMACTIC = "Climactic"
 
 
+class VolumeSignature(StrEnum):
+    """Advanced institutional volume signature."""
+
+    PROFESSIONAL_ACCUMULATION = "Professional Accumulation"
+    HEALTHY_DEMAND = "Healthy Demand"
+    CONSTRUCTIVE_DRY_UP = "Constructive Dry-Up"
+    NEUTRAL = "Neutral"
+    WEAK_DEMAND = "Weak Demand"
+    DISTRIBUTION = "Distribution"
+    CLIMACTIC = "Climactic"
+    CONFLICTED = "Conflicted"
+
+
 class VolumeFacts(BaseModel):
     """Point-in-time volume, pressure, and event measurements."""
 
@@ -64,3 +77,18 @@ class VolumeProfile(BaseModel):
     reasons: tuple[str, ...] = Field(min_length=1)
     warnings: tuple[str, ...]
     facts: VolumeFacts
+    pocket_pivot: bool = False
+    supporting_action: bool = False
+    stalling_day: bool = False
+    churning_day: bool = False
+    climax_top: bool = False
+    selling_climax: bool = False
+    hidden_accumulation_score: float = Field(default=0, ge=0, le=100)
+    hidden_distribution_score: float = Field(default=0, ge=0, le=100)
+    up_down_volume_ratio: float = Field(default=1, ge=0)
+    accumulation_distribution_rating: str = "C"
+    volume_signature: VolumeSignature = VolumeSignature.NEUTRAL
+    volume_event_confidence: float = Field(default=0, ge=0, le=1)
+    dry_up_sequence: bool = False
+    demand_expansion: bool = False
+    supply_expansion: bool = False

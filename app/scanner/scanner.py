@@ -4,6 +4,7 @@ from collections.abc import Iterable, Mapping
 
 from app.core.constants import DEFAULT_BENCHMARK
 from app.core.logging import get_logger
+from app.core.v11_config import ScannerProfileConfig
 from app.data.benchmark import BenchmarkSnapshot, build_benchmark_snapshot
 from app.data.facts import build_facts
 from app.data.indicators import add_indicators
@@ -13,6 +14,7 @@ from app.engine.avwap import AVWAPEngine
 from app.engine.breadth import BreadthEngine
 from app.engine.cpr import CPREngine
 from app.engine.decision import DecisionEngine
+from app.engine.industry import IndustryGroupEngine
 from app.engine.market import MarketEngine
 from app.engine.risk import RiskEngine
 from app.engine.scorer import Scorer
@@ -46,6 +48,7 @@ class Scanner:
         breadth_engine: BreadthEngine | None = None,
         cpr_engine: CPREngine | None = None,
         avwap_engine: AVWAPEngine | None = None,
+        industry_engine: IndustryGroupEngine | None = None,
     ) -> None:
         """Initialize the scanner with explicit, replaceable collaborators."""
         self._loader = loader
@@ -62,11 +65,14 @@ class Scanner:
         self._breadth_engine = breadth_engine or BreadthEngine()
         self._cpr_engine = cpr_engine or CPREngine()
         self._avwap_engine = avwap_engine or AVWAPEngine()
+        self._industry_engine = industry_engine or IndustryGroupEngine()
 
     def scan(
         self,
         symbols: Iterable[str],
         sector_by_symbol: Mapping[str, str] | None = None,
+        industry_by_symbol: Mapping[str, str] | None = None,
+        scanner_profile: ScannerProfileConfig | None = None,
     ) -> list[StockResult]:
         """Scan symbols independently and return successful results by score."""
         universe = load_symbols(symbols)
@@ -83,11 +89,21 @@ class Scanner:
         breadth_profile = self._breadth_engine.analyze(frames)
         market_profile = self._market_engine.analyze(frames)
         sector_analysis = self._sector_engine.analyze(frames, benchmark, sector_by_symbol)
+        industry_analysis = self._industry_engine.analyze(
+            frames,
+            benchmark,
+            industry_by_symbol,
+            sector_by_symbol,
+            sector_analysis.sectors,
+        )
         results: list[StockResult] = []
         for symbol, frame in frames.items():
             try:
                 sector_name = sector_analysis.symbol_sectors.get(symbol, "Unclassified")
                 sector_profile = sector_analysis.sectors.get(sector_name)
+                industry_profile = industry_analysis.groups.get(
+                    industry_analysis.symbol_groups.get(symbol, "Unclassified")
+                )
                 stock_profile = self._stock_engine.analyze(symbol, frame)
                 setup_profile = self._setup_engine.analyze(symbol, frame, stock_profile)
                 volume_profile = self._volume_engine.analyze(symbol, frame)
@@ -106,6 +122,7 @@ class Scanner:
                     breadth_profile,
                     cpr_profile,
                     avwap_profile,
+                    industry_profile,
                 )
                 risk_profile = self._risk_engine.analyze(facts)
                 facts = facts.model_copy(
@@ -137,6 +154,9 @@ class Scanner:
                 breadth_profile,
                 result.facts.cpr_profile,
                 result.facts.avwap_profile,
+                result.facts.industry_group_profile,
+                result.facts.volume_profile,
+                scanner_profile,
             )
             decided_results.append(result.model_copy(update={"decision_profile": decision}))
         results = decided_results
@@ -151,6 +171,7 @@ class Scanner:
             breadth_profile,
             tuple(result.facts.cpr_profile for result in results),
             tuple(result.facts.avwap_profile for result in results),
+            tuple(industry_analysis.groups.values()),
         )
         results = [result.model_copy(update={"situation_profile": situation}) for result in results]
         results.sort(key=lambda result: (-result.decision_score, result.symbol))

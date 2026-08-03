@@ -30,7 +30,7 @@ class VolumeEngine:
         quality = self._quality_score(facts, accumulation, distribution, dryup, expansion)
         state = self._state(facts, accumulation, distribution, quality)
         confidence = min(1.0, facts.history_days / self.FULL_CONFIDENCE_SESSIONS)
-        return VolumeProfile(
+        profile = VolumeProfile(
             score=round(quality, 2),
             confidence=round(confidence, 2),
             grade=self._grade(quality),
@@ -44,6 +44,9 @@ class VolumeEngine:
             warnings=self._warnings(facts, confidence),
             facts=facts,
         )
+        from app.engine.advanced_volume import AdvancedVolumeEngine
+
+        return AdvancedVolumeEngine().enhance(profile, frame)
 
     def calculate_facts(self, symbol: str, frame: pd.DataFrame) -> VolumeFacts:
         """Calculate volume events and participation statistics without indicators."""

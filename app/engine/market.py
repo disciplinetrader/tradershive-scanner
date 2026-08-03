@@ -156,7 +156,7 @@ class MarketEngine:
         state = self._classify(score, breadth, volatility)
         confidence = self._confidence(index_facts, breadth, vix_value)
         reasons = self._reasons(index_facts, breadth, volatility, state)
-        return MarketProfile(
+        profile = MarketProfile(
             score=round(score, 2),
             confidence=round(confidence, 2),
             state=state,
@@ -165,6 +165,9 @@ class MarketEngine:
             breadth=breadth,
             volatility=volatility,
         )
+        from app.engine.advanced_market import AdvancedMarketEngine
+
+        return AdvancedMarketEngine().enhance(profile, index_frames)
 
     @staticmethod
     def _calculate_volatility(

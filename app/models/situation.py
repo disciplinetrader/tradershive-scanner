@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.avwap import AVWAPState
 from app.models.breadth import BreadthProfile
-from app.models.market import MarketRegime
+from app.models.market import MarketRegime, RiskOnState
 
 
 class TradingBias(StrEnum):
@@ -90,6 +90,10 @@ class SituationProfile(BaseModel):
     cpr_breakout_participation: float = Field(default=0, ge=0, le=100)
     avwap_environment: AVWAPState = AVWAPState.NEUTRAL
     avwap_support_participation: float = Field(default=0, ge=0, le=100)
+    market_pressure_score: float = Field(default=0, ge=0, le=100)
+    risk_on_state: RiskOnState = RiskOnState.NEUTRAL
+    leading_industries: tuple[str, ...] = ()
+    market_opportunity_count: dict[str, int] = Field(default_factory=dict)
     trading_bias: TradingBias
     aggression: Aggression
     recommended_setup_types: tuple[RecommendedSetup, ...] = Field(min_length=1)

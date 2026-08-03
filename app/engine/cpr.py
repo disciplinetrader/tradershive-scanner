@@ -178,7 +178,7 @@ class CPREngine:
         widths = ((2 * pivots - 2 * midpoints).abs() / pivots * 100).to_numpy(dtype=float)
         less = float(np.sum(widths < current[3]))
         equal = float(np.sum(np.isclose(widths, current[3], rtol=1e-9, atol=1e-12)))
-        percentile = (less + 0.5 * equal) / len(widths) * 100
+        percentile = max(0.0, min(100.0, (less + 0.5 * equal) / len(widths) * 100))
         width_state = self._width_state(percentile)
         relationship = self._relationship(current, previous)
         bc, tc = current[1], current[2]

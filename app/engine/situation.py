@@ -6,6 +6,7 @@ from app.models.avwap import AVWAPProfile, AVWAPState
 from app.models.breadth import BreadthProfile, BreadthState
 from app.models.cpr import CPRProfile, CPRState
 from app.models.decision import DecisionAction, DecisionProfile
+from app.models.industry import IndustryGroupProfile, IndustryRotation
 from app.models.market import MarketProfile, MarketRegime
 from app.models.relative_strength import RelativeStrengthProfile
 from app.models.risk import RiskGrade, RiskProfile
@@ -39,6 +40,7 @@ class SituationEngine:
         breadth: BreadthProfile | None = None,
         cprs: Sequence[CPRProfile] = (),
         avwaps: Sequence[AVWAPProfile] = (),
+        industries: Sequence[IndustryGroupProfile] = (),
     ) -> SituationProfile:
         """Return one shared situation without recalculating subordinate work."""
         leadership = self._leadership(sectors)
@@ -60,6 +62,9 @@ class SituationEngine:
         if cprs and cpr_environment == "Range Favored":
             aggression = self._downgrade(aggression)
             warnings.append("CPR structures favor range behavior")
+        if market.market_pressure_score >= 70:
+            aggression = self._downgrade(aggression)
+            warnings.append("High market pressure requires reduced aggression")
         if market.state in {MarketRegime.BEAR, MarketRegime.CAPITULATION}:
             bias = TradingBias.CASH
             aggression = Aggression.VERY_LOW
@@ -83,6 +88,21 @@ class SituationEngine:
             cpr_breakout_participation=cpr_participation,
             avwap_environment=avwap_environment,
             avwap_support_participation=avwap_participation,
+            market_pressure_score=market.market_pressure_score,
+            risk_on_state=market.risk_on_state,
+            leading_industries=tuple(
+                profile.facts.name
+                for profile in industries
+                if profile.rotation in {IndustryRotation.LEADING, IndustryRotation.IMPROVING}
+            )[:5],
+            market_opportunity_count={
+                "A+ setups": sum(item.grade.value == "A+" for item in setups),
+                "A setups": sum(item.grade.value == "A" for item in setups),
+                "BUY candidates": sum(item.action == DecisionAction.BUY for item in decisions),
+                "WATCHLIST candidates": sum(
+                    item.action == DecisionAction.WATCHLIST for item in decisions
+                ),
+            },
             trading_bias=bias,
             aggression=aggression,
             recommended_setup_types=setup_types,

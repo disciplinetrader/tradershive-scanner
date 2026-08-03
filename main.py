@@ -11,6 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.core.config import Settings, get_settings
 from app.core.constants import FEATURE_WEIGHTS
 from app.core.logging import configure_logging
+from app.core.v11_config import ScannerProfileConfig, ScannerProfileName
 from app.data.cache import MarketDataCache
 from app.data.loader import DataLoader
 from app.data.sectors import load_sector_assignments
@@ -43,6 +44,8 @@ class ScanRequest(BaseModel):
 
     symbols: list[str] = Field(min_length=1, max_length=500)
     sectors: dict[str, str] = Field(default_factory=dict)
+    industries: dict[str, str] = Field(default_factory=dict)
+    scanner_profile: ScannerProfileName = ScannerProfileName.MOMENTUM_BREAKOUT
 
 
 class HealthResponse(BaseModel):
@@ -105,7 +108,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     def scan(request: ScanRequest) -> list[StockResult]:
         """Download, score, and rank the requested NSE symbols."""
         try:
-            return build_scanner(resolved_settings).scan(request.symbols, request.sectors)
+            return build_scanner(resolved_settings).scan(
+                request.symbols,
+                request.sectors,
+                request.industries,
+                ScannerProfileConfig(name=request.scanner_profile),
+            )
         except (ValueError, RuntimeError) as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
 
@@ -125,9 +133,24 @@ def cli(arguments: Sequence[str] | None = None) -> int:
         type=Path,
         help="Optional JSON object mapping symbols to supported sectors",
     )
+    parser.add_argument("--industry-map", type=Path, help="Optional symbol-to-industry JSON map")
+    parser.add_argument(
+        "--profile",
+        choices=[item.value for item in ScannerProfileName],
+        default=ScannerProfileName.MOMENTUM_BREAKOUT.value,
+    )
+    parser.add_argument("--detailed", action="store_true")
     parsed = parser.parse_args(arguments)
     sector_assignments = load_sector_assignments(parsed.sector_map) if parsed.sector_map else None
-    results = build_scanner().scan(parsed.symbols, sector_assignments)
+    industry_assignments = (
+        load_sector_assignments(parsed.industry_map) if parsed.industry_map else None
+    )
+    results = build_scanner().scan(
+        parsed.symbols,
+        sector_assignments,
+        industry_assignments,
+        ScannerProfileConfig(name=ScannerProfileName(parsed.profile)),
+    )
     if results and results[0].situation_profile:
         situation = results[0].situation_profile
         print("Situation Summary")
@@ -157,7 +180,19 @@ def cli(arguments: Sequence[str] | None = None) -> int:
             f"R {result.facts.available_r_multiple or 0:>5.2f} "
             f"RS {result.features['relative_strength'].score:>6.2f} "
             f"Pctl {result.facts.relative_strength_percentile:>6.2f}"
+            f" IndustryRank {result.facts.industry_group_rank:>3}"
+            f" VolSig {result.facts.volume_profile.volume_signature.value:<25}"
         )
+        if parsed.detailed and decision:
+            targets = result.facts.risk_profile.facts if result.facts.risk_profile else None
+            print(
+                f"    Profile {decision.scanner_profile} | Pivot {result.facts.pivot_price} | "
+                f"Entry {result.facts.entry_price} | Stop {result.facts.stop_price} | "
+                f"Targets {getattr(targets, 'target_2r', None)}/"
+                f"{getattr(targets, 'target_3r', None)}"
+            )
+            print(f"    Reasons: {' | '.join(decision.reasons)}")
+            print(f"    Warnings: {' | '.join(decision.warnings)}")
     if parsed.output:
         report = generate_excel_report(results, parsed.output)
         print(f"Report written to {report}")

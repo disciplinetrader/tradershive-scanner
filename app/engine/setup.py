@@ -1,5 +1,6 @@
 """Objective swing-setup detection and scoring engine."""
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from itertools import pairwise
 
@@ -9,6 +10,7 @@ import pandas as pd
 from app.data.indicators import add_indicators
 from app.models.setup import (
     ContractionDetail,
+    ListingMetadata,
     SetupCandidate,
     SetupFacts,
     SetupProfile,
@@ -65,6 +67,9 @@ class SetupEngine:
         symbol: str,
         frame: pd.DataFrame,
         stock_profile: StockProfile | None = None,
+        earnings_dates: Sequence[pd.Timestamp] = (),
+        avwap_alignment: bool | None = None,
+        listing_metadata: ListingMetadata | None = None,
     ) -> SetupProfile:
         """Return the strongest observed setup and its complete evidence."""
         enriched = (
@@ -127,7 +132,7 @@ class SetupEngine:
             range_contraction_ratio=round(context.range_ratio, 4),
         )
         reasons = detected_best.reasons + self._quality_reasons(context, confidence)
-        return SetupProfile.model_construct(
+        profile = SetupProfile.model_construct(
             score=round(overall, 2),
             confidence=round(confidence, 2),
             grade=self._grade(overall),
@@ -141,6 +146,15 @@ class SetupEngine:
             facts=facts,
             candidates=candidates,
         )
+        from app.engine.advanced_setup import AdvancedSetupEngine
+
+        return AdvancedSetupEngine().enhance(
+            profile,
+            enriched,
+            earnings_dates=earnings_dates,
+            avwap_alignment=avwap_alignment,
+            listing_metadata=listing_metadata,
+        )
 
     def _context(self, symbol: str, frame: pd.DataFrame) -> tuple[_Context, float]:
         """Validate recent history and calculate reusable setup measurements."""
@@ -151,45 +165,45 @@ class SetupEngine:
         if len(frame) < 120:
             raise ValueError(f"{symbol} requires at least 120 sessions for setup intelligence")
         recent = frame.iloc[-60:]
-        ohlc_values = recent[["Open", "High", "Low", "Close"]].to_numpy(dtype=float)
-        finite_ohlc = pd.Series(np.isfinite(ohlc_values).all(axis=1), index=recent.index)
-        required_values = recent[list(required)].to_numpy(dtype=float)
-        completeness = float(np.count_nonzero(np.isfinite(required_values)) / required_values.size)
+        columns = ("Open", "High", "Low", "Close", "Volume", "EMA20", "EMA50", "ATR14")
+        values = recent.loc[:, columns].to_numpy(dtype=float)
+        completeness = float(np.count_nonzero(np.isfinite(values)) / values.size)
+        finite_ohlc = np.isfinite(values[:, :4]).all(axis=1)
         if not bool(finite_ohlc.all()):
-            recent = recent.loc[finite_ohlc]
+            recent = recent.iloc[np.flatnonzero(finite_ohlc)]
+            values = values[finite_ohlc]
         if len(recent) < 30:
             raise ValueError(f"{symbol} has insufficient valid recent bars")
         base = recent.iloc[-self.BASE_LENGTH :]
-        close = float(base["Close"].iloc[-1])
-        base_high = float(base["High"].max())
-        base_low = float(base["Low"].min())
+        high_values = values[:, 1]
+        low_values = values[:, 2]
+        close_values = values[:, 3]
+        volume_values = values[:, 4]
+        ema20_values = values[:, 5]
+        close = float(close_values[-1])
+        base_high = float(np.max(high_values[-self.BASE_LENGTH :]))
+        base_low = float(np.min(low_values[-self.BASE_LENGTH :]))
         depth = (base_high - base_low) / base_high
         location = (close - base_low) / max(base_high - base_low, close * 0.001)
-        volume = recent["Volume"].astype(float)
-        recent_volume = float(volume.iloc[-10:].mean())
-        prior_volume = float(volume.iloc[-40:-10].mean())
+        recent_volume = float(np.mean(volume_values[-10:]))
+        prior_volume = float(np.mean(volume_values[-40:-10]))
         dry_up = (
             recent_volume / prior_volume if prior_volume > 0 and np.isfinite(recent_volume) else 1.0
         )
-        ranges = (recent["High"] - recent["Low"]).astype(float)
-        prior_range = float(ranges.iloc[-40:-20].mean())
-        range_ratio = float(ranges.iloc[-10:].mean()) / prior_range if prior_range > 0 else 1.0
-        close_changes = base["Close"].pct_change().abs()
-        tight_closes = int((close_changes <= 0.005).sum())
-        latest = recent.iloc[-1]
-        previous = recent.iloc[-2]
-        inside = bool(latest["High"] < previous["High"] and latest["Low"] > previous["Low"])
-        nr7 = bool(ranges.iloc[-1] <= ranges.iloc[-7:].min())
-        contractions = self._contractions(recent.iloc[-30:])
-        ema20 = float(latest["EMA20"])
-        ema50 = float(latest["EMA50"])
-        prior_advance = close / float(recent["Close"].iloc[-60]) - 1
+        ranges = high_values - low_values
+        prior_range = float(np.mean(ranges[-40:-20]))
+        range_ratio = float(np.mean(ranges[-10:])) / prior_range if prior_range > 0 else 1.0
+        close_changes = np.abs(
+            close_values[-self.BASE_LENGTH + 1 :] / close_values[-self.BASE_LENGTH : -1] - 1
+        )
+        tight_closes = int(np.sum(close_changes <= 0.005))
+        inside = bool(high_values[-1] < high_values[-2] and low_values[-1] > low_values[-2])
+        nr7 = bool(ranges[-1] <= np.min(ranges[-7:]))
+        contractions = self._contractions(high_values[-30:], low_values[-30:])
+        ema20 = float(ema20_values[-1])
+        ema50 = float(values[-1, 6])
+        prior_advance = close / float(close_values[-60]) - 1
         uptrend = bool(close >= ema20 >= ema50 and prior_advance >= 0.08)
-        close_values = recent["Close"].to_numpy(dtype=float)
-        high_values = recent["High"].to_numpy(dtype=float)
-        low_values = recent["Low"].to_numpy(dtype=float)
-        volume_values = recent["Volume"].to_numpy(dtype=float)
-        ema20_values = recent["EMA20"].to_numpy(dtype=float)
         first_pullback = self._first_pullback(
             close_values, high_values, low_values, volume_values, ema20_values
         )
@@ -208,7 +222,7 @@ class SetupEngine:
             else 1.0
         )
         holds_ema = close >= ema20 * 0.98
-        rs_strong = float(latest["Return100D"]) > 0
+        rs_strong = float(recent["Return100D"].iloc[-1]) > 0
         overhead = max(0.0, float(np.max(high_values)) / base_high - 1)
         confidence = min(1.0, len(frame) / 252) * completeness
         return (
@@ -240,18 +254,23 @@ class SetupEngine:
         )
 
     @staticmethod
-    def _contractions(frame: pd.DataFrame) -> tuple[ContractionDetail, ...]:
+    def _contractions(
+        high_values: np.ndarray, low_values: np.ndarray
+    ) -> tuple[ContractionDetail, ...]:
         """Measure three chronological contraction segments in the latest base."""
         details: list[ContractionDetail] = []
-        segment_size = len(frame) // 3
+        segment_size = len(high_values) // 3
         segments = (
-            frame.iloc[:segment_size],
-            frame.iloc[segment_size : segment_size * 2],
-            frame.iloc[segment_size * 2 :],
+            (high_values[:segment_size], low_values[:segment_size]),
+            (
+                high_values[segment_size : segment_size * 2],
+                low_values[segment_size : segment_size * 2],
+            ),
+            (high_values[segment_size * 2 :], low_values[segment_size * 2 :]),
         )
-        for sequence, segment in enumerate(segments, 1):
-            high = float(segment["High"].max())
-            low = float(segment["Low"].min())
+        for sequence, (segment_high, segment_low) in enumerate(segments, 1):
+            high = float(np.max(segment_high))
+            low = float(np.min(segment_low))
             depth = (high - low) / high * 100
             if depth >= 1.0:
                 details.append(
@@ -260,7 +279,7 @@ class SetupEngine:
                         depth_percent=round(depth, 2),
                         high=round(high, 4),
                         low=round(low, 4),
-                        sessions=len(segment),
+                        sessions=len(segment_high),
                     )
                 )
         return tuple(details)
