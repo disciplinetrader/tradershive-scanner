@@ -23,7 +23,7 @@ from app.features.trend import TrendFeature
 from app.features.volatility import VolatilityFeature
 from app.features.volume import VolumeFeature
 from app.providers.base import MarketDataProvider
-from app.reports.excel import generate_excel_report
+from app.reports.excel import TOP_HEADERS, generate_excel_report
 from app.scanner.scanner import Scanner
 
 
@@ -67,10 +67,10 @@ def build_test_scanner(frame: pd.DataFrame) -> Scanner:
     return Scanner(DataLoader(SymbolProvider(frame)), Scorer(registry, FEATURE_WEIGHTS), "^NSEI")
 
 
-def test_scanner_ranks_results_and_report_contains_expected_columns(
+def test_scanner_ranks_results_and_report_is_styled_without_changing_data(
     rising_frame: pd.DataFrame, tmp_path: Path
 ) -> None:
-    """The full pipeline should rank stocks and export its supporting evidence."""
+    """The report should be usable and preserve the scanner's exact payload."""
     results = build_test_scanner(rising_frame).scan(["WEAK", "STRONG"])
     assert [result.rank for result in results] == [1, 2]
     assert results[0].symbol == "STRONG.NS"
@@ -78,54 +78,59 @@ def test_scanner_ranks_results_and_report_contains_expected_columns(
 
     report = generate_excel_report(results, tmp_path / "scanner.xlsx")
     workbook = load_workbook(report)
-    sheet = workbook["Momentum Scanner"]
-    headers = [cell.value for cell in sheet[1]]
-    assert headers[:3] == ["Rank", "Symbol", "Score"]
-    assert headers[:42] == [
-        "Rank",
-        "Symbol",
-        "Score",
-        "Decision Score",
-        "Action",
-        "Trade Grade",
-        "Decision Confidence",
-        "Decision Reasons",
-        "Stock Grade",
-        "Stock Score",
-        "Breadth Grade",
-        "Breadth Score",
-        "Breadth State",
-        "Breadth Confidence",
-        "CPR Grade",
-        "CPR Score",
-        "CPR State",
-        "CPR Breakout %",
-        "CPR Trend %",
-        "CPR Range %",
-        "Volume Grade",
-        "Volume Score",
-        "Volume State",
-        "Volume Confidence",
-        "Volume Reasons",
-        "Setup Type",
-        "Setup Grade",
-        "Setup Score",
-        "Pivot Price",
-        "Invalidation Price",
-        "Breakout Distance %",
-        "Risk Grade",
-        "Risk Score",
-        "Entry Price",
-        "Stop Price",
-        "Available R",
-        "RS",
-        "Percentile",
-        "Sector",
-        "Sector Rank",
-        "Sector Rotation",
-        "Sector Score",
+    assert workbook.sheetnames == [
+        "Situation Summary",
+        "Top 20",
+        "Detailed Candidates",
+        "Advanced Setup Details",
+        "Volume Intelligence",
+        "Sector and Industry Leadership",
+        "CPR",
+        "AVWAP",
+        "Risk",
+        "Validation Summary",
     ]
-    assert headers[-1] == "Reasons"
-    assert sheet.max_row == 3
+
+    top = workbook["Top 20"]
+    headers = [top.cell(10, column).value for column in range(1, len(TOP_HEADERS) + 1)]
+    assert headers == TOP_HEADERS
+    assert top["A1"].value == "TRADERSHIVE"
+    assert top["A2"].value.startswith("EOD MOMENTUM SCANNER")
+    assert top.freeze_panes == "C11"
+    assert top.auto_filter.ref == "A10:W12"
+    assert list(top.tables) == ["Top20Results"]
+    assert len(top.conditional_formatting) >= 5
+    assert top["B11"].value == results[0].symbol
+    assert top["D11"].value == results[0].decision_score
+    assert top["M11"].value == results[0].facts.relative_strength_percentile
+    assert top["Q11"].value == "N/A"
+    assert top["D11"].number_format == "0.00"
+    assert top["F11"].number_format == "0%"
+    assert top["L11"].number_format == "0.00x"
+    assert top["M11"].number_format == '0.0"%"'
+
+    details = workbook["Detailed Candidates"]
+    detail_headers = [cell.value for cell in details[5]]
+    assert "Decision Reasons" in detail_headers
+    assert "RS Profile" in detail_headers
+    assert "AVWAP Anchors" in detail_headers
+    assert "Target 5R" in detail_headers
+    assert details.freeze_panes == "C6"
+    assert details.tables["DetailedCandidates"].ref.endswith("7")
+
+    for sheet in workbook.worksheets:
+        assert sheet.sheet_view.showGridLines is False
+        assert sheet.page_setup.orientation == "landscape"
+
     assert results[0].facts.relative_strength_percentile == 99
     assert results[1].facts.relative_strength_percentile == 0
+
+
+def test_excel_report_rejects_empty_results(tmp_path: Path) -> None:
+    """An empty workbook must not masquerade as a valid scan report."""
+    try:
+        generate_excel_report([], tmp_path / "empty.xlsx")
+    except ValueError as error:
+        assert str(error) == "Cannot generate a report without results"
+    else:
+        raise AssertionError("Expected empty report generation to fail")

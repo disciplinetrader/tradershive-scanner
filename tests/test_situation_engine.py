@@ -154,10 +154,10 @@ def test_scanner_and_excel_expose_shared_situation(rising_frame, tmp_path) -> No
     report = generate_excel_report(results, tmp_path / "situation.xlsx")
     workbook = load_workbook(report)
     assert workbook.sheetnames[0] == "Situation Summary"
-    assert workbook["Situation Summary"]["A2"].value == "Market Regime"
-    assert workbook["Situation Summary"]["A3"].value == "Breadth State"
-    assert "CPR Environment" in {
-        workbook["Situation Summary"].cell(row=row, column=1).value
-        for row in range(1, workbook["Situation Summary"].max_row + 1)
-    }
+    summary = workbook["Situation Summary"]
+    assert summary["A1"].value == "TRADERSHIVE"
+    assert summary["A4"].value == "Market Regime"
+    assert summary["A5"].value == results[0].situation_profile.market_regime.value
+    assert summary["A7"].value == "Breadth"
+    assert summary["J10"].value == "CPR Environment"
     assert results[0].decision_profile.action in DecisionAction
